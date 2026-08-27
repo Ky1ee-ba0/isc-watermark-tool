@@ -1,0 +1,1348 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Công cụ chèn Watermark - ISC</title>
+  
+  <link id="favicon" rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%2300c6ff'/%3E%3Cstop offset='1' stop-color='%230056b3'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect x='38' y='6' width='9' height='26' rx='4' transform='rotate(45 42 19)' fill='url(%23g)'/%3E%3Cpath d='M33 24 L14 43 Q10 47 14 51 Q18 55 22 51 L41 32 Z' fill='url(%23g)'/%3E%3Ccircle cx='16' cy='50' r='4' fill='%230056b3'/%3E%3Cg fill='%2300c6ff'%3E%3Cpath d='M50 40 L52 46 L58 48 L52 50 L50 56 L48 50 L42 48 L48 46 Z'/%3E%3Cpath d='M14 8 L15.4 12.2 L19.6 13.6 L15.4 15 L14 19.2 L12.6 15 L8.4 13.6 L12.6 12.2 Z'/%3E%3Ccircle cx='50' cy='16' r='2.4'/%3E%3C/g%3E%3C/svg%3E">
+
+  <!-- Thư viện Cropper.js để cắt ảnh -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+
+  <style>
+    :root { 
+      --bg: #f5f5f7; 
+      --panel: rgba(255, 255, 255, 0.75); 
+      --primary: #007aff; 
+      --primary-hover: #0056b3;
+      --border: rgba(0, 0, 0, 0.1); 
+      --text: #1d1d1f;
+      --text-muted: #86868b;
+      --radius: 12px;
+      --blur: 20px;
+    }
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif; margin: 0; background: var(--bg); display: flex; height: 100vh; overflow: hidden; color: var(--text); -webkit-font-smoothing: antialiased; }
+
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.3); }
+
+    .glass-panel { background: var(--panel); backdrop-filter: blur(var(--blur)); -webkit-backdrop-filter: blur(var(--blur)); border: 1px solid rgba(255, 255, 255, 0.4); box-shadow: 0 4px 20px rgba(0,0,0,0.03); }
+
+    .sidebar-left { width: clamp(210px, 20vw, 280px); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 20px; z-index: 10;}
+    .main-area { flex: 1; display: flex; flex-direction: column; background: #e5e5ea; min-width: 260px; position: relative; }
+    .sidebar-right { width: clamp(250px, 24vw, 340px); border-left: 1px solid var(--border); padding: 20px; overflow-y: auto; z-index: 10; display: flex; flex-direction: column; }
+
+    @media (max-width: 980px) {
+      .sidebar-left { width: 190px; padding: 14px; }
+      .sidebar-right { width: 230px; padding: 14px; }
+      .control-section { padding: 12px; margin-bottom: 16px; }
+      .topbar { padding: 8px 12px; }
+    }
+    @media (max-width: 700px) {
+      body { flex-direction: column; height: auto; min-height: 100vh; overflow-y: auto; }
+      .sidebar-left, .sidebar-right, .main-area { width: 100%; min-width: 0; }
+      .sidebar-left { border-right: none; border-bottom: 1px solid var(--border); order: 2; }
+      .main-area { order: 1; min-height: 55vh; }
+      .sidebar-right { border-left: none; border-top: 1px solid var(--border); order: 3; max-height: 60vh; }
+      .thumb-list { max-height: 220px; }
+      #previewImg { max-height: 45vh; }
+    }
+    .topbar { min-height: 60px; border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 10px 20px; justify-content: space-between; gap: 10px; flex-wrap: wrap; z-index: 10; }
+    
+    .btn { background: var(--primary); color: white; border: none; padding: 10px 18px; border-radius: 20px; font-weight: 600; cursor: pointer; font-size: 13px; transition: all 0.2s ease; box-shadow: 0 2px 5px rgba(0,122,255,0.3); display: inline-flex; align-items: center; gap: 6px; justify-content: center;}
+    .btn:hover:not(:disabled) { background: var(--primary-hover); transform: translateY(-1px); box-shadow: 0 4px 8px rgba(0,122,255,0.4); }
+    .btn:active:not(:disabled) { transform: translateY(0); box-shadow: 0 1px 3px rgba(0,122,255,0.3); }
+    .btn:disabled { background: #c7c7cc; cursor: not-allowed; box-shadow: none; transform: none; color: #fff;}
+    .btn.secondary { background: rgba(142, 142, 147, 0.15); color: var(--text); box-shadow: none; border: 1px solid rgba(0,0,0,0.05); }
+    .btn.secondary:hover:not(:disabled) { background: rgba(142, 142, 147, 0.25); }
+    .btn.secondary:disabled { color: var(--text-muted); background: rgba(142, 142, 147, 0.1); }
+    .btn.danger { background: rgba(255, 59, 48, 0.1); color: #ff3b30; box-shadow: none; border: 1px solid rgba(255,59,48,0.2); }
+    .btn.danger:hover:not(:disabled) { background: rgba(255, 59, 48, 0.2); }
+
+    .control-section {
+      margin-bottom: 22px;
+      background: linear-gradient(160deg, rgba(255,255,255,0.72), rgba(255,255,255,0.42));
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      padding: 16px;
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,0.7);
+      box-shadow: 0 6px 20px rgba(0,80,200,0.06), inset 0 1px 0 rgba(255,255,255,0.6);
+      position: relative;
+      isolation: isolate;
+    }
+    .control-group { margin-bottom: 12px; }
+    .control-group:last-child { margin-bottom: 0; }
+    .section-title {
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 14px; font-weight: 700; margin-bottom: 14px; color: var(--text);
+      padding-bottom: 10px;
+      border-bottom: 2.5px solid transparent;
+      border-image: linear-gradient(90deg, #0099ff, #00c6ff 45%, rgba(0,198,255,0)) 1;
+    }
+    .section-title span { display: flex; align-items: center; gap: 8px; }
+    label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 6px; color: var(--text-muted); }
+    input[type="text"], input[type="number"], select { width: 100%; padding: 10px 12px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; font-size: 13px; background: rgba(255,255,255,0.9); transition: border 0.2s; outline: none; }
+    input[type="text"]:focus, input[type="number"]:focus, select:focus { border-color: var(--primary); background: #fff; }
+    
+    input[type="range"] { -webkit-appearance: none; width: 100%; background: transparent; }
+    input[type="range"]:focus { outline: none; }
+    input[type="range"]::-webkit-slider-runnable-track { width: 100%; height: 6px; cursor: pointer; background: rgba(0,0,0,0.1); border-radius: 3px; }
+    input[type="range"]::-webkit-slider-thumb { height: 16px; width: 16px; border-radius: 50%; background: #fff; cursor: pointer; -webkit-appearance: none; margin-top: -5px; box-shadow: 0 1px 3px rgba(0,0,0,0.3); border: 1px solid rgba(0,0,0,0.1); }
+    input[type="range"]:focus::-webkit-slider-runnable-track { background: rgba(0,122,255,0.3); }
+
+    .anchor-grid-container { display: flex; justify-content: center; padding: 10px 0; }
+    .anchor-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; width: 110px; background: rgba(230, 235, 245, 0.5); padding: 8px; border-radius: 12px; border: 1px solid rgba(0,122,255,0.1); }
+    .anchor-cell { aspect-ratio: 1; background: #fff; border: 1px solid rgba(0,0,0,0.08); border-radius: 6px; cursor: pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+    .anchor-cell:hover { background: #e6f0fa; transform: scale(1.05); }
+    .anchor-cell.active { background: linear-gradient(135deg, #0099ff 0%, #0066cc 100%); border: none; box-shadow: 0 3px 8px rgba(0,114,255,0.4); transform: scale(1.05); }
+
+    .toggle-container { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+    .toggle-container input { display: none; }
+    .toggle-slider { width: 36px; height: 20px; background-color: #ccc; border-radius: 20px; position: relative; transition: .3s; }
+    .toggle-slider:before { content: ""; position: absolute; height: 16px; width: 16px; left: 2px; bottom: 2px; background-color: white; border-radius: 50%; transition: .3s; box-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+    .toggle-container input:checked + .toggle-slider { background-color: var(--primary); }
+    .toggle-container input:checked + .toggle-slider:before { transform: translateX(16px); }
+
+    .preview-container { flex: 1; display: flex; align-items: center; justify-content: center; padding: 20px; overflow: auto; position: relative; }
+    .preview-empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 40px; border-radius: 24px; border: 2px dashed rgba(0,122,255,0.25); background: rgba(255,255,255,0.35); backdrop-filter: blur(10px); max-width: 420px; transition: all 0.2s ease; }
+    .preview-empty-state.drag-over { border-color: var(--primary); background: rgba(0,122,255,0.08); transform: scale(1.02); }
+    .preview-empty-icon { width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, #0099ff, #0056b3); display: flex; align-items: center; justify-content: center; margin-bottom: 18px; box-shadow: 0 6px 18px rgba(0,122,255,0.35); }
+    .preview-empty-title { font-size: 17px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+    .preview-empty-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 20px; line-height: 1.5; }
+    .image-wrapper { position: relative; display: inline-block; max-width: 100%; max-height: 100%; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border-radius: 8px; overflow: hidden;}
+    #previewImg { display: block; max-width: 100%; max-height: 70vh; }
+    #wmOverlay { position: absolute; top: 0; left: 0; pointer-events: none; }
+    
+    .thumb-list { flex: 1; overflow-y: auto; margin-top: 15px; display: flex; flex-direction: column; gap: 10px; padding-right: 5px; }
+    .thumb-item { display: flex; align-items: center; gap: 10px; padding: 8px; border: 1px solid transparent; border-radius: 10px; cursor: pointer; background: rgba(255,255,255,0.6); position: relative; transition: all 0.2s; }
+    .thumb-item:hover { background: rgba(255,255,255,0.9); transform: translateX(2px); }
+    .thumb-item.active { border-color: rgba(0,122,255,0.4); background: #fff; box-shadow: 0 2px 8px rgba(0,122,255,0.1); }
+    .thumb-item img { width: 44px; height: 44px; object-fit: cover; border-radius: 6px; background: #f0f0f0; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.1); }
+    .thumb-name { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; font-weight: 500; }
+    .thumb-checkbox { margin: 0; width: 16px; height: 16px; cursor: pointer; accent-color: var(--primary); }
+    .empty-hint { font-size: 13px; color: var(--text-muted); text-align: center; margin-top: 40px; line-height: 1.6; }
+    
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .flex-row { display: flex; align-items: center; gap: 8px; }
+
+    .footer-brand { margin-top: auto; padding-top: 20px; text-align: center; font-size: 11px; color: var(--text-muted); border-top: 1px dashed rgba(0,0,0,0.1); }
+    .footer-brand .brand-name { color: var(--text); font-weight: 800; font-size: 13px; letter-spacing: 0.5px; margin-bottom: 4px; text-transform: uppercase;}
+    .footer-brand .brand-desc { font-size: 11px; opacity: 0.8; font-weight: 500; margin-bottom: 6px;}
+    .footer-brand .version-badge { display: inline-block; background: rgba(0,0,0,0.05); padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; color: var(--text-muted); border: 1px solid rgba(0,0,0,0.05);}
+
+    .progress-bar-fixed { position: fixed; left: 0; right: 0; bottom: 0; height: 46px; background: rgba(28, 28, 30, 0.95); backdrop-filter: blur(10px); color: #fff; display: none; align-items: center; padding: 0 24px; font-size: 13px; z-index: 999; gap: 16px; box-shadow: 0 -2px 10px rgba(0,0,0,0.2);}
+    .progress-label { white-space: nowrap; min-width: 170px; font-weight: 500; }
+    .progress-track { flex: 1; height: 6px; background: rgba(255,255,255,0.2); border-radius: 3px; overflow: hidden; }
+    .progress-fill { height: 100%; background: var(--primary); width: 0%; transition: width .1s linear; }
+    .progress-percent { width: 42px; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+    
+    .range-input-combo { display: flex; align-items: center; gap: 10px; }
+    .range-input-combo input[type="range"] { flex: 1; }
+    .range-input-combo input[type="number"] { width: 60px; padding: 6px; text-align: center; }
+
+    .list-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; padding-bottom: 10px; border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .list-actions label { margin: 0; font-size: 12px; display: flex; align-items: center; gap: 6px; cursor: pointer; color: var(--text); }
+    
+    .cropper-view-box, .cropper-face { border-radius: 0; }
+    .cropper-line, .cropper-point { background-color: var(--primary) !important; }
+
+    .toast-container { position: fixed; top: 20px; right: 20px; z-index: 1010; display: flex; flex-direction: column; gap: 10px; max-width: 360px; }
+    .toast { background: var(--panel); backdrop-filter: blur(var(--blur)); -webkit-backdrop-filter: blur(var(--blur)); border: 1px solid rgba(255,255,255,0.5); border-radius: var(--radius); padding: 12px 14px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); font-size: 13px; color: var(--text); display: flex; gap: 10px; align-items: flex-start; line-height: 1.5; animation: toast-in .25s ease; border-left: 4px solid var(--text-muted); }
+    .toast.error { border-left-color: #ff3b30; }
+    .toast.warning { border-left-color: #ff9500; }
+    .toast.success { border-left-color: #34c759; }
+    .toast-msg { flex: 1; }
+    .toast-close { flex: none; cursor: pointer; background: none; border: none; color: var(--text-muted); font-size: 16px; line-height: 1; padding: 0; }
+    @keyframes toast-in { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: translateX(0); } }
+
+    .thumb-img-wrap { position: relative; flex: none; }
+    .crop-badge { position: absolute; left: -4px; top: -4px; width: 16px; height: 16px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 3px rgba(0,0,0,0.35); border: 1.5px solid #fff; }
+
+    .thumb-item[draggable="true"] { cursor: grab; }
+    .thumb-item.dragging { opacity: 0.4; }
+    .thumb-item.drag-over-top { box-shadow: inset 0 2px 0 var(--primary); }
+    .thumb-item.drag-over-bottom { box-shadow: inset 0 -2px 0 var(--primary); }
+
+    .icon-btn { width: 32px; height: 32px; padding: 0; border-radius: 50%; background: rgba(142,142,147,0.15); color: var(--text-muted); border: 1px solid rgba(0,0,0,0.05); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all .2s; flex: none; }
+    .icon-btn:hover { background: rgba(0,122,255,0.12); color: var(--primary); }
+
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.35); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 1002; padding: 20px; }
+    .modal-backdrop.open { display: flex; }
+    .modal-box { background: #fff; border-radius: 18px; width: 100%; max-width: 420px; padding: 22px; box-shadow: 0 20px 60px rgba(0,0,0,0.25); max-height: 88vh; overflow-y: auto; }
+    .modal-title { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+    .modal-title h3 { margin: 0; font-size: 17px; font-weight: 700; }
+    .modal-close { background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 4px; line-height: 1; border-radius: 50%; }
+    .modal-close:hover { background: rgba(0,0,0,0.06); }
+    .modal-sub { font-size: 12px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5; }
+    .modal-box label { margin-top: 4px; }
+    .modal-box textarea { width: 100%; padding: 10px 12px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; font-size: 13px; font-family: inherit; resize: vertical; min-height: 90px; outline: none; background: rgba(255,255,255,0.9); }
+    .modal-box textarea:focus, .modal-box input:focus { border-color: var(--primary); }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+    .modal-email-hint { font-size: 11px; color: var(--text-muted); margin-top: 8px; text-align: center; }
+  </style>
+</head>
+<body>
+
+  <!-- LEFT SIDEBAR -->
+  <div class="sidebar-left glass-panel">
+    <div style="margin-bottom: 15px; display:flex; align-items:center; justify-content:space-between; gap:10px;">
+      <h3 style="margin: 0; font-size: 16px; font-weight: 700;">Bộ sưu tập ảnh</h3>
+      <input type="file" id="uploadImages" accept="image/*" multiple style="display: none;">
+      <button class="btn" onclick="document.getElementById('uploadImages').click()" style="padding: 8px 12px;" title="Thêm ảnh">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
+    </div>
+
+    <div class="list-actions">
+      <label><input type="checkbox" id="selectAllCheckbox" class="thumb-checkbox"> Chọn tất cả</label>
+      <button class="btn danger" style="padding: 4px 10px; font-size: 11px;" id="deleteSelectedBtn" disabled>Xóa đã chọn</button>
+    </div>
+
+    <div class="thumb-list" id="thumbList">
+      <div class="empty-hint" id="emptyHint">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:10px; opacity: 0.4;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+        <br>Danh sách ảnh sẽ<br>hiện ở đây.
+      </div>
+    </div>
+    
+    <!-- BRANDING -->
+    <div class="footer-brand">
+      <div class="brand-name">Phát triển bởi Bảo Kỳ</div>
+      <div class="brand-desc">Lưu hành nội bộ ISC</div>
+      <div class="version-badge">Bản Chính Thức v1.1.7</div>
+    </div>
+  </div>
+
+  <!-- MAIN AREA -->
+  <div class="main-area">
+    <div class="topbar glass-panel">
+      <div class="flex-row">
+        <span style="font-weight: 600; font-size: 14px; min-width: 150px;" id="statusText">Chưa chọn ảnh</span>
+        
+        <button class="btn secondary" id="undoBtn" style="padding: 6px 12px; margin-left: 10px; font-size: 12px;" disabled title="Hoàn tác (Ctrl+Z)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v6h6"></path><path d="M21 17a9 9 0 00-9-9 9 9 0 00-6 2.3L3 13"></path></svg>
+        </button>
+        <button class="btn secondary" id="redoBtn" style="padding: 6px 12px; font-size: 12px;" disabled title="Làm lại (Ctrl+Y)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 7v6h-6"></path><path d="M3 17a9 9 0 019-9 9 9 0 016 2.3l3 2.7"></path></svg>
+        </button>
+        <button class="icon-btn" id="reportBugBtn" style="margin-left: 10px;" title="Báo lỗi / Góp ý">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        </button>
+      </div>
+      
+      <div style="display:flex; gap:10px; align-items:center; flex-wrap: wrap;">
+        <select id="exportFormat" style="width:auto; padding:8px 12px; border-radius: 8px; font-weight: 500;">
+          <option value="jpeg" selected>JPG (Nhẹ, khuyên dùng đăng Mạng xã hội)</option>
+          <option value="png">PNG (Nặng hơn, không giảm chất lượng)</option>
+        </select>
+        <button class="btn" id="downloadBtn" disabled>Tải ảnh này</button>
+        <button class="btn secondary" id="downloadAllBtn" disabled title="Chọn ít nhất 1 ảnh trong danh sách để tải">Tải đã chọn (.zip)</button>
+      </div>
+    </div>
+    
+    <div class="preview-container" id="dropZone">
+      <div class="preview-empty-state" id="previewEmptyState">
+        <div class="preview-empty-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        </div>
+        <div class="preview-empty-title">Kéo thả ảnh vào đây</div>
+        <div class="preview-empty-sub">hoặc bấm nút bên dưới để tải ảnh lên<br>(hỗ trợ chọn nhiều ảnh cùng lúc)</div>
+        <button class="btn" onclick="document.getElementById('uploadImages').click()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+          Tải ảnh lên
+        </button>
+      </div>
+      <div class="image-wrapper" id="imgWrapper" style="display: none;">
+        <img id="previewImg" src="" alt="Preview">
+        <canvas id="wmOverlay"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT SIDEBAR -->
+  <div class="sidebar-right glass-panel">
+    
+    <!-- CROP & RESIZE SECTION -->
+    <div class="control-section" style="background: rgba(0,122,255,0.03); border-color: rgba(0,122,255,0.15);">
+      <div class="section-title">
+        <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0056b3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.13 1L6 16a2 2 0 002 2h15"/><path d="M1 6.13L16 6a2 2 0 012 2v15"/></svg>Cắt & Tối ưu</span>
+        <label class="toggle-container">
+          <input type="checkbox" id="enableCrop">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      
+      <!-- Crop Controls -->
+      <div id="cropControls" style="opacity: 0.4; pointer-events: none;">
+        <div class="control-group">
+          <label>Tỉ lệ cắt</label>
+          <select id="cropRatio">
+            <option value="free" selected>Tùy chỉnh tự do</option>
+            <option value="1">1:1 (Instagram Post / Avatar)</option>
+            <option value="1.91">1.91:1 (Facebook Link)</option>
+            <option value="1.7777777777777777">16:9 (Youtube / Hình nền)</option>
+            <option value="0.8">4:5 (Ảnh dọc Instagram)</option>
+            <option value="0.5625">9:16 (Story / Reels / TikTok)</option>
+          </select>
+        </div>
+        <div class="grid-2">
+          <div class="control-group">
+            <label>Rộng (px)</label>
+            <input type="number" id="cropWNum" placeholder="Mục tiêu">
+          </div>
+          <div class="control-group">
+            <label>Cao (px)</label>
+            <input type="number" id="cropHNum" placeholder="Mục tiêu">
+          </div>
+        </div>
+        <button class="btn secondary" id="applyCropBtn" style="width:100%; padding: 6px; font-size:12px;">Áp dụng kích thước</button>
+      </div>
+
+      <hr style="border:0; border-top:1px dashed rgba(0,0,0,0.1); margin: 15px 0;">
+
+      <!-- Size Controls -->
+      <div class="control-group">
+        <label>Thu phóng ảnh</label>
+        <select id="exportScale">
+          <option value="1" selected>100% (Giữ kích thước gốc)</option>
+          <option value="0.75">75% (Thu nhỏ một chút)</option>
+          <option value="0.5">50% (Giảm một nửa)</option>
+          <option value="0.25">25% (Siêu nhỏ, tải nhanh)</option>
+        </select>
+      </div>
+      
+      <div class="control-group" style="margin-top: 15px;">
+        <label class="toggle-container" style="margin-bottom: 8px;">
+          <input type="checkbox" id="enableSizeLimit">
+          <span class="toggle-slider"></span>
+          <span class="toggle-label" style="font-size: 12px; font-weight: 600;">Ép dung lượng cố định (Chỉ JPG)</span>
+        </label>
+        <div class="flex-row" id="sizeLimitWrap" style="opacity: 0.4; pointer-events: none;">
+          <input type="number" id="targetSizeKB" value="500" min="50" max="10000" style="flex:1;">
+          <span style="font-size: 12px; font-weight: 600; color: var(--text-muted);">KB / Ảnh</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- TEXT WATERMARK -->
+    <div class="control-section">
+      <div class="section-title">
+        <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0056b3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>Watermark Chữ</span>
+        <label class="toggle-container">
+          <input type="checkbox" id="enableText" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div id="textControls">
+        <div class="control-group">
+          <input type="text" id="wmText" value="LOGO" placeholder="Nhập nội dung...">
+        </div>
+        <div class="control-group">
+          <label>Kiểu bố trí</label>
+          <select id="wmLayout">
+            <option value="grid" selected>Lưới chéo lặp lại</option>
+            <option value="center">Chính giữa</option>
+            <option value="corner">Góc dưới phải</option>
+          </select>
+        </div>
+        <div class="control-group" id="wmDensityGroup">
+          <label>Mật độ watermark</label>
+          <div class="range-input-combo">
+            <input type="range" id="wmDensityRange" min="0.4" max="3" step="0.1" value="1">
+            <input type="number" id="wmDensityNum" min="0.4" max="3" step="0.1" value="1" title="Bội số mật độ">
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="control-group">
+            <label>Cỡ chữ</label>
+            <input type="number" id="wmSize" value="100" min="8">
+          </div>
+          <div class="control-group">
+            <label>Màu sắc</label>
+            <input type="color" id="wmColor" value="#ff0000" style="padding: 2px; height: 38px;">
+          </div>
+        </div>
+        <div class="control-group">
+          <label>Độ mờ</label>
+          <div class="range-input-combo">
+            <input type="range" id="wmOpacityRange" min="0.05" max="1" step="0.05" value="0.3">
+            <input type="number" id="wmOpacityNum" min="5" max="100" value="30" title="%">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LOGO WATERMARK -->
+    <div class="control-section">
+      <div class="section-title">
+        <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0056b3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>Watermark Logo</span>
+        <label class="toggle-container">
+          <input type="checkbox" id="enableLogo" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div id="logoControls">
+        <div class="control-group flex-row">
+          <input type="file" id="uploadLogo" accept="image/*" style="display: none;">
+          <button class="btn secondary" onclick="document.getElementById('uploadLogo').click()" style="flex: 1; padding: 8px;">Tải Logo Lên</button>
+          <button class="btn danger" id="clearLogoBtn" style="padding: 8px;" title="Xóa logo" disabled>Xóa</button>
+        </div>
+        
+        <div class="control-group">
+          <label style="text-align: center; margin-top: 10px;">Vị trí Logo</label>
+          <div class="anchor-grid-container">
+            <div class="anchor-grid" id="logoAnchorGrid">
+              <div data-pos="tl" class="anchor-cell"></div>
+              <div data-pos="tc" class="anchor-cell"></div>
+              <div data-pos="tr" class="anchor-cell"></div>
+              <div data-pos="ml" class="anchor-cell"></div>
+              <div data-pos="mc" class="anchor-cell"></div>
+              <div data-pos="mr" class="anchor-cell"></div>
+              <div data-pos="bl" class="anchor-cell"></div>
+              <div data-pos="bc" class="anchor-cell"></div>
+              <div data-pos="br" class="anchor-cell active"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <label>Kích thước (px)</label>
+          <div class="range-input-combo">
+            <input type="range" id="logoWidthRange" min="20" max="1000" step="10" value="500">
+            <input type="number" id="logoWidthNum" min="20" max="1000" value="500">
+          </div>
+        </div>
+        <div class="control-group">
+          <label>Độ mờ</label>
+          <div class="range-input-combo">
+            <input type="range" id="logoOpacityRange" min="0.05" max="1" step="0.05" value="0.8">
+            <input type="number" id="logoOpacityNum" min="5" max="100" value="80" title="%">
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- POPUP BÁO LỖI -->
+  <div class="modal-backdrop" id="reportBugBackdrop">
+    <div class="modal-box glass-panel" style="background:#fff;">
+      <div class="modal-title">
+        <h3>Báo lỗi / Góp ý</h3>
+        <button class="modal-close" id="reportBugCloseBtn" title="Đóng">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-sub">Mô tả ngắn gọn lỗi bạn gặp phải hoặc góp ý, ứng dụng mail trên máy sẽ mở sẵn nội dung để bạn gửi đi.</div>
+      <div class="control-group">
+        <label>Tiêu đề</label>
+        <input type="text" id="reportBugSubject" placeholder="VD: Crop bị mất khi chuyển ảnh">
+      </div>
+      <div class="control-group">
+        <label>Chi tiết</label>
+        <textarea id="reportBugDetail" placeholder="Mô tả các bước bạn đã làm và lỗi gặp phải..."></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn secondary" id="reportBugCancelBtn">Hủy</button>
+        <button class="btn" id="reportBugSendBtn">Gửi báo lỗi</button>
+      </div>
+      <div class="modal-email-hint">Gửi tới: lebaokybf4@gmail.com</div>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <div class="progress-bar-fixed" id="progressBar">
+    <span class="progress-label" id="progressLabel">Đang xử lý...</span>
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+    <span class="progress-percent" id="progressPercent">0%</span>
+  </div>
+
+<!-- Thư viện tạo file Zip -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+  let historyStack = [];
+  let historyIndex = -1;
+  let isUndoRedoAction = false;
+  let currentLogoPos = 'br'; 
+
+  function getSettingsState() {
+    return {
+      enableCrop: document.getElementById('enableCrop').checked,
+      cropRatio: document.getElementById('cropRatio').value,
+      cropWNum: document.getElementById('cropWNum').value,
+      cropHNum: document.getElementById('cropHNum').value,
+      exportScale: document.getElementById('exportScale').value,
+      enableSizeLimit: document.getElementById('enableSizeLimit').checked,
+      targetSizeKB: document.getElementById('targetSizeKB').value,
+      enableText: document.getElementById('enableText').checked,
+      wmText: document.getElementById('wmText').value,
+      wmLayout: document.getElementById('wmLayout').value,
+      wmSize: document.getElementById('wmSize').value,
+      wmDensity: document.getElementById('wmDensityRange').value,
+      wmColor: document.getElementById('wmColor').value,
+      wmOpacity: document.getElementById('wmOpacityRange').value,
+      enableLogo: document.getElementById('enableLogo').checked,
+      logoPosition: currentLogoPos,
+      logoWidth: document.getElementById('logoWidthRange').value,
+      logoOpacity: document.getElementById('logoOpacityRange').value
+    };
+  }
+
+  function applySettingsState(state) {
+    if(!state) return;
+    isUndoRedoAction = true; 
+    
+    document.getElementById('enableCrop').checked = !!state.enableCrop;
+    document.getElementById('cropRatio').value = state.cropRatio || 'free';
+    document.getElementById('cropWNum').value = state.cropWNum || '';
+    document.getElementById('cropHNum').value = state.cropHNum || '';
+
+    document.getElementById('exportScale').value = state.exportScale || '1';
+    document.getElementById('enableSizeLimit').checked = !!state.enableSizeLimit;
+    document.getElementById('targetSizeKB').value = state.targetSizeKB || '500';
+
+    document.getElementById('enableText').checked = state.enableText;
+    document.getElementById('wmText').value = state.wmText;
+    document.getElementById('wmLayout').value = state.wmLayout;
+    document.getElementById('wmSize').value = state.wmSize;
+    document.getElementById('wmDensityRange').value = state.wmDensity || '1';
+    document.getElementById('wmDensityNum').value = state.wmDensity || '1';
+    document.getElementById('wmColor').value = state.wmColor;
+    document.getElementById('wmOpacityRange').value = state.wmOpacity;
+    document.getElementById('wmOpacityNum').value = Math.round(state.wmOpacity * 100);
+    
+    document.getElementById('enableLogo').checked = state.enableLogo;
+    document.getElementById('logoWidthRange').value = state.logoWidth;
+    document.getElementById('logoWidthNum').value = state.logoWidth;
+    document.getElementById('logoOpacityRange').value = state.logoOpacity;
+    document.getElementById('logoOpacityNum').value = Math.round(state.logoOpacity * 100);
+
+    setAnchorActive(state.logoPosition);
+
+    toggleSections();
+    updateWmDensityVisibility();
+    handleCropToggle(); 
+    scheduleOverlayRender();
+    
+    setTimeout(() => { isUndoRedoAction = false; }, 50);
+  }
+
+  function updateHistoryButtons() {
+    document.getElementById('undoBtn').disabled = historyIndex <= 0;
+    document.getElementById('redoBtn').disabled = historyIndex >= historyStack.length - 1;
+  }
+
+  function saveHistory() {
+    if(isUndoRedoAction) return;
+    const currentState = getSettingsState();
+    if(historyIndex >= 0) {
+      const last = historyStack[historyIndex];
+      if(JSON.stringify(last) === JSON.stringify(currentState)) return;
+    }
+    
+    historyStack = historyStack.slice(0, historyIndex + 1);
+    historyStack.push(currentState);
+    historyIndex++;
+    if(historyStack.length > 50) { historyStack.shift(); historyIndex--; }
+    updateHistoryButtons();
+  }
+
+  function performUndo() { if(historyIndex > 0) { historyIndex--; applySettingsState(historyStack[historyIndex]); updateHistoryButtons(); } }
+  function performRedo() { if(historyIndex < historyStack.length - 1) { historyIndex++; applySettingsState(historyStack[historyIndex]); updateHistoryButtons(); } }
+
+  document.getElementById('undoBtn').addEventListener('click', performUndo);
+  document.getElementById('redoBtn').addEventListener('click', performRedo);
+  
+  document.addEventListener('keydown', (e) => {
+    const t = e.target;
+    const textEditableTypes = ['text', 'number', 'search', 'email', 'url', 'tel', 'password'];
+    const isEditable = t && (
+      (t.tagName === 'INPUT' && textEditableTypes.includes(t.type)) ||
+      t.tagName === 'TEXTAREA' ||
+      t.isContentEditable
+    );
+
+    if (e.ctrlKey || e.metaKey) {
+      if (isEditable) return;
+      if (e.key === 'z' || e.key === 'Z') { e.preventDefault(); if (e.shiftKey) performRedo(); else performUndo(); } 
+      else if (e.key === 'y' || e.key === 'Y') { e.preventDefault(); performRedo(); }
+      return;
+    }
+
+    if (isEditable) return;
+
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+      if (images.length === 0) return;
+      e.preventDefault();
+      let newIndex = currentIndex + (e.key === 'ArrowRight' ? 1 : -1);
+      newIndex = Math.max(0, Math.min(images.length - 1, newIndex));
+      if (newIndex !== currentIndex) { saveCurrentCropData(); currentIndex = newIndex; renderThumbnails(); loadCurrentImage(); }
+    }
+    else if (e.key === 'Delete') {
+      if (currentIndex === -1) return;
+      e.preventDefault();
+      removeCurrentImage();
+    }
+  });
+
+  function saveCurrentCropData() {
+    if (cropper && images[currentIndex]) {
+      images[currentIndex].cropData = cropper.getData();
+    }
+  }
+
+  function removeCurrentImage() {
+    if (currentIndex === -1 || !images[currentIndex]) return;
+    const removed = images.splice(currentIndex, 1)[0];
+    if (images.length === 0) currentIndex = -1;
+    else currentIndex = Math.min(currentIndex, images.length - 1);
+    updateSelectAllState();
+    renderThumbnails();
+    loadCurrentImage();
+    showToast(`Đã xóa khỏi danh sách: ${removed.name}`, 'success', 2200);
+  }
+
+  const gridCells = document.querySelectorAll('.anchor-cell');
+  function setAnchorActive(pos) {
+    currentLogoPos = pos;
+    gridCells.forEach(cell => {
+      if(cell.dataset.pos === pos) cell.classList.add('active');
+      else cell.classList.remove('active');
+    });
+  }
+  gridCells.forEach(cell => {
+    cell.addEventListener('click', () => { setAnchorActive(cell.dataset.pos); saveHistory(); scheduleOverlayRender(); });
+  });
+
+  let images = [];       
+  let currentIndex = -1;
+  let logoImg = null;    
+  let imageIdCounter = 0;
+  let cropper = null;
+  let currentImgUrl = null; 
+  let cropperUpdating = false;
+
+  const previewImg = document.getElementById('previewImg');
+  const imgWrapper = document.getElementById('imgWrapper');
+  const wmOverlay = document.getElementById('wmOverlay');
+  const overlayCtx = wmOverlay.getContext('2d');
+
+  const el = {
+    enableText: document.getElementById('enableText'),
+    wmText: document.getElementById('wmText'),
+    wmSize: document.getElementById('wmSize'),
+    wmDensityRange: document.getElementById('wmDensityRange'),
+    wmOpacityRange: document.getElementById('wmOpacityRange'),
+    wmColor: document.getElementById('wmColor'),
+    wmLayout: document.getElementById('wmLayout'),
+    enableLogo: document.getElementById('enableLogo'),
+    logoWidthRange: document.getElementById('logoWidthRange'),
+    logoOpacityRange: document.getElementById('logoOpacityRange'),
+  };
+  
+  const downloadBtn = document.getElementById('downloadBtn');
+  const downloadAllBtn = document.getElementById('downloadAllBtn');
+  const emptyHint = document.getElementById('emptyHint');
+  const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+  const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
+  
+  const progressBar = document.getElementById('progressBar');
+  const progressFill = document.getElementById('progressFill');
+  const progressLabel = document.getElementById('progressLabel');
+  const progressPercent = document.getElementById('progressPercent');
+  const toastContainer = document.getElementById('toastContainer');
+
+  function showToast(message, type = 'error', duration = 6000) {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    const msg = document.createElement('div');
+    msg.className = 'toast-msg';
+    msg.textContent = message;
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'toast-close';
+    closeBtn.innerHTML = '&times;';
+    closeBtn.onclick = () => toast.remove();
+    toast.appendChild(msg);
+    toast.appendChild(closeBtn);
+    toastContainer.appendChild(toast);
+    setTimeout(() => toast.remove(), duration);
+  }
+
+  function showProgress(label) { progressLabel.textContent = label; progressFill.style.width = '0%'; progressPercent.textContent = '0%'; progressBar.style.display = 'flex'; }
+  function setProgress(current, total, label) { const pct = total > 0 ? Math.round((current / total) * 100) : 0; progressFill.style.width = pct + '%'; progressPercent.textContent = pct + '%'; if (label) progressLabel.textContent = label; }
+  function hideProgress() { progressBar.style.display = 'none'; }
+
+  function decodeToImage(file) {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => resolve({ img, url });
+      img.onerror = (e) => { URL.revokeObjectURL(url); reject(e); };
+      img.src = url;
+    });
+  }
+
+  async function makeThumbnail(file) {
+    const { img, url } = await decodeToImage(file);
+    const THUMB = 80;
+    const scale = Math.max(THUMB / img.width, THUMB / img.height);
+    const tw = img.width * scale, th = img.height * scale;
+    const tCanvas = document.createElement('canvas');
+    tCanvas.width = THUMB; tCanvas.height = THUMB;
+    const tctx = tCanvas.getContext('2d');
+    tctx.fillStyle = '#ffffff'; tctx.fillRect(0, 0, THUMB, THUMB);
+    tctx.drawImage(img, (THUMB - tw) / 2, (THUMB - th) / 2, tw, th);
+    const width = img.width, height = img.height;
+    URL.revokeObjectURL(url); 
+    return { thumbUrl: tCanvas.toDataURL('image/jpeg', 0.8), width, height };
+  }
+
+  async function handleFiles(filesArray) {
+    if (filesArray.length === 0) return;
+    showProgress(`Đang tải 0/${filesArray.length}...`);
+    let added = 0;
+    const failed = []; 
+    for (const file of filesArray) {
+      if(!file.type.startsWith('image/')) { failed.push(`${file.name} (không phải file ảnh)`); added++; setProgress(added, filesArray.length, `Đang tải ${added}/${filesArray.length}...`); continue; }
+      try {
+        const { thumbUrl, width, height } = await makeThumbnail(file);
+        images.push({ id: imageIdCounter++, name: file.name, file, thumbUrl, width, height, selected: false, cropData: null });
+        if (currentIndex === -1) currentIndex = 0;
+      } catch (err) { failed.push(file.name); console.error('Lỗi:', file.name, err); }
+      added++; setProgress(added, filesArray.length, `Đang tải ${added}/${filesArray.length}...`);
+    }
+    hideProgress(); updateSelectAllState(); renderThumbnails(); loadCurrentImage();
+    if (failed.length > 0) {
+      const shown = failed.slice(0, 3).join(', ');
+      const more = failed.length > 3 ? ` và ${failed.length - 3} file khác` : '';
+      showToast(`Bỏ qua ${failed.length} file không đọc được: ${shown}${more}`, 'warning', 9000);
+    }
+  }
+
+  document.getElementById('uploadImages').addEventListener('change', (e) => { handleFiles(Array.from(e.target.files)); e.target.value = ''; });
+  const dropZone = document.getElementById('dropZone');
+  const previewEmptyState = document.getElementById('previewEmptyState');
+  function updatePreviewEmptyState() {
+    previewEmptyState.style.display = images.length === 0 ? 'flex' : 'none';
+  }
+  dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.background = 'rgba(0,122,255,0.05)'; previewEmptyState.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); dropZone.style.background = 'transparent'; previewEmptyState.classList.remove('drag-over'); });
+  dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.style.background = 'transparent'; previewEmptyState.classList.remove('drag-over'); handleFiles(Array.from(e.dataTransfer.files)); });
+
+  document.getElementById('uploadLogo').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    decodeToImage(file).then(({ img }) => {
+      logoImg = img; document.getElementById('clearLogoBtn').disabled = false; document.getElementById('enableLogo').checked = true;
+      toggleSections(); saveHistory(); scheduleOverlayRender();
+    });
+  });
+
+  document.getElementById('clearLogoBtn').addEventListener('click', () => {
+    logoImg = null; document.getElementById('uploadLogo').value = ''; document.getElementById('clearLogoBtn').disabled = true;
+    saveHistory(); scheduleOverlayRender();
+  });
+
+  function updateSelectAllState() {
+    if(images.length === 0) { selectAllCheckbox.checked = false; selectAllCheckbox.indeterminate = false; selectAllCheckbox.disabled = true; deleteSelectedBtn.disabled = true; return; }
+    selectAllCheckbox.disabled = false;
+    const selectedCount = images.filter(img => img.selected).length;
+    if(selectedCount === 0) { selectAllCheckbox.checked = false; selectAllCheckbox.indeterminate = false; deleteSelectedBtn.disabled = true; } 
+    else if (selectedCount === images.length) { selectAllCheckbox.checked = true; selectAllCheckbox.indeterminate = false; deleteSelectedBtn.disabled = false; } 
+    else { selectAllCheckbox.checked = false; selectAllCheckbox.indeterminate = true; deleteSelectedBtn.disabled = false; }
+  }
+
+  function updateDownloadAllState() {
+    const selectedCount = images.filter(img => img.selected).length;
+    downloadAllBtn.disabled = selectedCount === 0;
+    if (selectedCount === 0) {
+      downloadAllBtn.innerHTML = 'Tải đã chọn (.zip)';
+    } else if (selectedCount === images.length) {
+      downloadAllBtn.innerHTML = `Tải tất cả (.zip) · ${selectedCount}`;
+    } else {
+      downloadAllBtn.innerHTML = `Tải đã chọn (.zip) · ${selectedCount}`;
+    }
+  }
+
+  selectAllCheckbox.addEventListener('change', (e) => { images.forEach(img => img.selected = e.target.checked); updateSelectAllState(); updateDownloadAllState(); renderThumbnails(); });
+  deleteSelectedBtn.addEventListener('click', () => {
+    const count = images.filter(img => img.selected).length;
+    if (count === 0) return;
+    if (!confirm(`Xóa ${count} ảnh đã chọn khỏi danh sách?\n(File gốc trên máy tính không bị ảnh hưởng)`)) return;
+    saveCurrentCropData();
+    const currentId = images[currentIndex] ? images[currentIndex].id : -1;
+    images = images.filter(img => !img.selected);
+    if(images.length === 0) { currentIndex = -1; } 
+    else { currentIndex = images.findIndex(img => img.id === currentId); if(currentIndex === -1) currentIndex = 0; }
+    updateSelectAllState(); renderThumbnails(); loadCurrentImage();
+  });
+
+  function toggleImageSelection(index, evt) { evt.stopPropagation(); images[index].selected = !images[index].selected; updateSelectAllState(); updateDownloadAllState(); renderThumbnails(); }
+
+  let dragSrcIndex = null;
+  function moveImage(fromIndex, toIndex) {
+    if (fromIndex === toIndex) return;
+    const [moved] = images.splice(fromIndex, 1);
+    images.splice(toIndex, 0, moved);
+  }
+
+  function renderThumbnails() {
+    const list = document.getElementById('thumbList');
+    list.innerHTML = '';
+    if (images.length === 0) { list.appendChild(emptyHint); } 
+    else {
+      images.forEach((item, index) => {
+        const div = document.createElement('div'); div.className = `thumb-item ${index === currentIndex ? 'active' : ''}`;
+        div.draggable = true;
+        const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.className = 'thumb-checkbox'; checkbox.checked = item.selected; checkbox.onclick = (e) => toggleImageSelection(index, e);
+
+        const imgWrap = document.createElement('div'); imgWrap.className = 'thumb-img-wrap';
+        const imgEl = document.createElement('img'); imgEl.src = item.thumbUrl; imgEl.loading = 'lazy';
+        imgWrap.appendChild(imgEl);
+        if (item.cropData) {
+          const badge = document.createElement('div');
+          badge.className = 'crop-badge';
+          badge.title = 'Ảnh này đã được crop/cắt riêng';
+          badge.innerHTML = '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><path d="M6.13 1L6 16a2 2 0 002 2h15"/><path d="M1 6.13L16 6a2 2 0 012 2v15"/></svg>';
+          imgWrap.appendChild(badge);
+        }
+
+        const nameEl = document.createElement('div'); nameEl.className = 'thumb-name'; nameEl.textContent = item.name; nameEl.title = item.name;
+        div.appendChild(checkbox); div.appendChild(imgWrap); div.appendChild(nameEl);
+        div.onclick = (e) => { if(e.target === checkbox) return; if (currentIndex === index) return; saveCurrentCropData(); currentIndex = index; renderThumbnails(); loadCurrentImage(); };
+
+        div.addEventListener('dragstart', (e) => {
+          dragSrcIndex = index;
+          div.classList.add('dragging');
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/plain', String(index));
+        });
+        div.addEventListener('dragend', () => {
+          div.classList.remove('dragging');
+          list.querySelectorAll('.thumb-item').forEach(el => el.classList.remove('drag-over-top', 'drag-over-bottom'));
+        });
+        div.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          if (dragSrcIndex === null || dragSrcIndex === index) return;
+          const rect = div.getBoundingClientRect();
+          const isAfter = (e.clientY - rect.top) > rect.height / 2;
+          div.classList.toggle('drag-over-bottom', isAfter);
+          div.classList.toggle('drag-over-top', !isAfter);
+        });
+        div.addEventListener('dragleave', () => div.classList.remove('drag-over-top', 'drag-over-bottom'));
+        div.addEventListener('drop', (e) => {
+          e.preventDefault();
+          div.classList.remove('drag-over-top', 'drag-over-bottom');
+          if (dragSrcIndex === null || dragSrcIndex === index) return;
+          const rect = div.getBoundingClientRect();
+          const isAfter = (e.clientY - rect.top) > rect.height / 2;
+          const currentId = images[currentIndex] ? images[currentIndex].id : -1;
+          let targetIndex = index + (isAfter ? 1 : 0);
+          if (dragSrcIndex < targetIndex) targetIndex--; 
+          moveImage(dragSrcIndex, targetIndex);
+          dragSrcIndex = null;
+          currentIndex = images.findIndex(img => img.id === currentId);
+          renderThumbnails();
+        });
+
+        list.appendChild(div);
+      });
+    }
+    const hasImages = images.length > 0;
+    downloadBtn.disabled = !hasImages;
+    updateDownloadAllState();
+    updatePreviewEmptyState();
+    document.getElementById('statusText').innerText = hasImages ? `Đang xem: ${images[currentIndex].name}` : 'Chưa có ảnh nào';
+  }
+
+  function syncInputs(rangeId, numId, multiplier = 1) {
+    const range = document.getElementById(rangeId), num = document.getElementById(numId);
+    range.addEventListener('input', () => { num.value = Math.round(range.value * multiplier); scheduleOverlayRender(); });
+    range.addEventListener('change', () => { saveHistory(); });
+    num.addEventListener('input', () => { let val = parseFloat(num.value) / multiplier; if (val < range.min) val = range.min; if (val > range.max) val = range.max; range.value = val; scheduleOverlayRender(); });
+    num.addEventListener('change', () => { saveHistory(); });
+  }
+  syncInputs('wmOpacityRange', 'wmOpacityNum', 100);
+  syncInputs('logoWidthRange', 'logoWidthNum', 1);
+  syncInputs('logoOpacityRange', 'logoOpacityNum', 100);
+
+  (function syncDensityInputs() {
+    const range = document.getElementById('wmDensityRange'), num = document.getElementById('wmDensityNum');
+    range.addEventListener('input', () => { num.value = range.value; scheduleOverlayRender(); });
+    range.addEventListener('change', () => { saveHistory(); });
+    num.addEventListener('input', () => {
+      let val = parseFloat(num.value);
+      if (isNaN(val)) return;
+      if (val < parseFloat(range.min)) val = parseFloat(range.min);
+      if (val > parseFloat(range.max)) val = parseFloat(range.max);
+      range.value = val;
+      scheduleOverlayRender();
+    });
+    num.addEventListener('change', () => { saveHistory(); });
+  })();
+
+  function updateWmDensityVisibility() {
+    const isGrid = document.getElementById('wmLayout').value === 'grid';
+    document.getElementById('wmDensityGroup').style.display = isGrid ? '' : 'none';
+  }
+  document.getElementById('wmLayout').addEventListener('change', updateWmDensityVisibility);
+  updateWmDensityVisibility();
+
+  function toggleSections() {
+    const textOn = document.getElementById('enableText').checked;
+    const logoOn = document.getElementById('enableLogo').checked;
+    const limitOn = document.getElementById('enableSizeLimit').checked;
+    
+    document.getElementById('textControls').style.opacity = textOn ? '1' : '0.4';
+    document.getElementById('textControls').style.pointerEvents = textOn ? 'auto' : 'none';
+    document.getElementById('logoControls').style.opacity = logoOn ? '1' : '0.4';
+    document.getElementById('logoControls').style.pointerEvents = logoOn ? 'auto' : 'none';
+    document.getElementById('sizeLimitWrap').style.opacity = limitOn ? '1' : '0.4';
+    document.getElementById('sizeLimitWrap').style.pointerEvents = limitOn ? 'auto' : 'none';
+  }
+
+  document.getElementById('enableText').addEventListener('change', () => { toggleSections(); saveHistory(); scheduleOverlayRender(); });
+  document.getElementById('enableLogo').addEventListener('change', () => { toggleSections(); saveHistory(); scheduleOverlayRender(); });
+  document.getElementById('enableSizeLimit').addEventListener('change', () => { toggleSections(); saveHistory(); });
+  document.getElementById('exportScale').addEventListener('change', () => { saveHistory(); });
+  document.getElementById('targetSizeKB').addEventListener('change', () => { saveHistory(); });
+  document.querySelectorAll('#textControls input, #textControls select').forEach(el => {
+    el.addEventListener('change', () => { saveHistory(); scheduleOverlayRender(); });
+    if(el.type === 'text' || el.type === 'color' || el.type === 'number') el.addEventListener('input', scheduleOverlayRender);
+  });
+
+  const REPORT_BUG_EMAIL = 'lebaokybf4@gmail.com';
+  const reportBugBackdrop = document.getElementById('reportBugBackdrop');
+  const reportBugSubject = document.getElementById('reportBugSubject');
+  const reportBugDetail = document.getElementById('reportBugDetail');
+
+  function openReportBugModal() { reportBugBackdrop.classList.add('open'); }
+  function closeReportBugModal() { reportBugBackdrop.classList.remove('open'); }
+  document.getElementById('reportBugBtn').addEventListener('click', openReportBugModal);
+  document.getElementById('reportBugCloseBtn').addEventListener('click', closeReportBugModal);
+  document.getElementById('reportBugCancelBtn').addEventListener('click', closeReportBugModal);
+  reportBugBackdrop.addEventListener('click', (e) => { if (e.target === reportBugBackdrop) closeReportBugModal(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && reportBugBackdrop.classList.contains('open')) closeReportBugModal(); });
+
+  document.getElementById('reportBugSendBtn').addEventListener('click', () => {
+    const subject = reportBugSubject.value.trim() || 'Báo lỗi công cụ Watermark ISC';
+    const detailText = reportBugDetail.value.trim();
+    if (!detailText) { showToast('Vui lòng mô tả chi tiết lỗi trước khi gửi.', 'warning', 3500); return; }
+    const bodyLines = [
+      detailText,
+      '',
+      '---',
+      `Ảnh đang xử lý: ${images.length}`,
+      `Định dạng xuất: ${document.getElementById('exportFormat').value}`,
+    ];
+    const mailto = `mailto:${REPORT_BUG_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyLines.join('\n'))}`;
+    window.location.href = mailto;
+    closeReportBugModal();
+    reportBugSubject.value = ''; reportBugDetail.value = '';
+    showToast('Đã mở ứng dụng mail để bạn gửi báo lỗi.', 'success', 4000);
+  });
+
+  setAnchorActive('br');
+  saveHistory();
+
+  function handleCropToggle() {
+    const cropOn = document.getElementById('enableCrop').checked;
+    document.getElementById('cropControls').style.opacity = cropOn ? '1' : '0.4';
+    document.getElementById('cropControls').style.pointerEvents = cropOn ? 'auto' : 'none';
+    
+    if (cropOn && !cropper && currentImgUrl) {
+      initCropper();
+    } else if (!cropOn && cropper) {
+      cropper.destroy();
+      cropper = null;
+      syncOverlayWithImage(); 
+    }
+  }
+  document.getElementById('enableCrop').addEventListener('change', () => { saveHistory(); handleCropToggle(); });
+
+  function initCropper() {
+    if(cropper) cropper.destroy();
+    
+    let ratio = document.getElementById('cropRatio').value;
+    let aspectRatio = ratio === 'free' ? NaN : parseFloat(ratio);
+    
+    const savedDataForRestore = images[currentIndex] && images[currentIndex].cropData;
+    
+    cropper = new Cropper(previewImg, {
+      aspectRatio: aspectRatio,
+      viewMode: 1, 
+      background: false,
+      zoomable: false,
+      autoCropArea: 0.9,
+      ready() {
+        if(savedDataForRestore) {
+           requestAnimationFrame(() => {
+             if(!cropper) return;
+             cropperUpdating = true;
+             cropper.setData(savedDataForRestore);
+             cropperUpdating = false;
+             if(images[currentIndex]) images[currentIndex].cropData = cropper.getData();
+             syncOverlayWithCropper();
+           });
+        }
+        syncOverlayWithCropper();
+      },
+      crop(event) {
+        if(cropperUpdating) return;
+        // Đã khóa - Không tự động điền số liệu của Cropper vào input nữa
+        
+        if(images[currentIndex]) {
+          images[currentIndex].cropData = cropper.getData();
+        }
+        syncOverlayWithCropper();
+      }
+    });
+  }
+
+  document.getElementById('cropRatio').addEventListener('change', (e) => {
+    if(!cropper) return;
+    let val = e.target.value;
+    cropper.setAspectRatio(val === 'free' ? NaN : parseFloat(val));
+    
+    // Xóa kích thước mục tiêu nếu đổi tỷ lệ
+    document.getElementById('cropWNum').value = '';
+    document.getElementById('cropHNum').value = '';
+    if(images[currentIndex]) {
+      delete images[currentIndex].targetExportW;
+      delete images[currentIndex].targetExportH;
+    }
+    saveHistory();
+  });
+
+  document.getElementById('applyCropBtn').addEventListener('click', () => {
+    if(!cropper) return;
+    const w = parseFloat(document.getElementById('cropWNum').value);
+    const h = parseFloat(document.getElementById('cropHNum').value);
+    if(w > 0 && h > 0) {
+      // Ép tỷ lệ khung cắt theo w/h
+      cropper.setAspectRatio(w / h);
+      
+      // Lưu thông số ép kích thước lúc xuất ảnh
+      if(images[currentIndex]) {
+        images[currentIndex].targetExportW = w;
+        images[currentIndex].targetExportH = h;
+        images[currentIndex].cropData = cropper.getData();
+      }
+      syncOverlayWithCropper();
+      saveHistory();
+      showToast(`Đã khóa tỉ lệ. Ảnh xuất ra sẽ được ép về đúng ${w}x${h}px.`, 'success', 3000);
+    }
+  });
+
+  async function loadCurrentImage() {
+    if (currentIndex === -1 || !images[currentIndex]) { 
+      imgWrapper.style.display = 'none'; 
+      if(cropper) { cropper.destroy(); cropper = null; }
+      if(currentImgUrl) { URL.revokeObjectURL(currentImgUrl); currentImgUrl = null; }
+      
+      document.getElementById('cropWNum').value = '';
+      document.getElementById('cropHNum').value = '';
+      return; 
+    }
+    
+    imgWrapper.style.display = 'inline-block';
+    const item = images[currentIndex];
+    
+    // Nạp lại thông số targetExport (nếu có) vào giao diện
+    if (item.targetExportW && item.targetExportH) {
+      document.getElementById('cropWNum').value = item.targetExportW;
+      document.getElementById('cropHNum').value = item.targetExportH;
+    } else {
+      document.getElementById('cropWNum').value = '';
+      document.getElementById('cropHNum').value = '';
+    }
+    
+    if(currentImgUrl) URL.revokeObjectURL(currentImgUrl);
+    currentImgUrl = URL.createObjectURL(item.file);
+    
+    if(cropper) { cropper.destroy(); cropper = null; }
+    
+    previewImg.onload = () => {
+      if (document.getElementById('enableCrop').checked) {
+        initCropper();
+      } else {
+        syncOverlayWithImage();
+      }
+    };
+    previewImg.src = currentImgUrl;
+  }
+
+  function buildGridTile(text, size, color, opacity, gap) {
+    const tile = document.createElement('canvas'); tile.width = gap; tile.height = gap; const tctx = tile.getContext('2d');
+    tctx.font = `bold ${size}px "SF Pro Text", Arial, sans-serif`; tctx.fillStyle = color; tctx.globalAlpha = opacity; tctx.textAlign = 'center'; tctx.textBaseline = 'middle';
+    tctx.translate(gap / 2, gap / 2); tctx.rotate(-30 * Math.PI / 180); tctx.fillText(text, 0, 0); return tile;
+  }
+
+  function drawWatermarkContent(targetCtx, width, height, scale = 1, shouldClear = true) {
+    if (shouldClear) targetCtx.clearRect(0, 0, width, height);
+
+    if (el.enableText.checked) {
+      const text = el.wmText.value;
+      const size = Math.max(1, Math.round((parseInt(el.wmSize.value) || 32) * scale));
+      const opacity = parseFloat(el.wmOpacityRange.value);
+      const color = el.wmColor.value;
+      const layout = el.wmLayout.value;
+      if (text) {
+        if (layout === 'grid') {
+          targetCtx.save();
+          targetCtx.font = `bold ${size}px "SF Pro Text", Arial, sans-serif`;
+          const textWidth = targetCtx.measureText(text).width;
+          targetCtx.restore();
+          const angle = 30 * Math.PI / 180;
+          const rotatedSpan = textWidth * Math.cos(angle) + size * Math.sin(angle);
+          const baseGap = Math.max(rotatedSpan * 1.4, size * 6, 150 * scale);
+          const density = parseFloat(el.wmDensityRange.value) || 1;
+          const gap = Math.max(baseGap / density, size * 1.5);
+          const pattern = targetCtx.createPattern(buildGridTile(text, size, color, opacity, gap), 'repeat');
+          targetCtx.save(); targetCtx.fillStyle = pattern; targetCtx.fillRect(0, 0, width, height); targetCtx.restore();
+        } else if (layout === 'center') {
+          targetCtx.save(); targetCtx.font = `bold ${size}px "SF Pro Text", Arial, sans-serif`; targetCtx.fillStyle = color; targetCtx.globalAlpha = opacity; targetCtx.textAlign = 'center'; targetCtx.textBaseline = 'middle';
+          targetCtx.translate(width / 2, height / 2); targetCtx.rotate(-30 * Math.PI / 180); targetCtx.fillText(text, 0, 0); targetCtx.restore();
+        } else if (layout === 'corner') {
+          targetCtx.save(); targetCtx.font = `bold ${size}px "SF Pro Text", Arial, sans-serif`; targetCtx.fillStyle = color; targetCtx.globalAlpha = opacity; targetCtx.textAlign = 'right'; targetCtx.textBaseline = 'bottom';
+          targetCtx.fillText(text, width - 20 * scale, height - 20 * scale); targetCtx.restore();
+        }
+      }
+    }
+
+    if (el.enableLogo.checked && logoImg) {
+      const lWidth = Math.max(1, Math.round((parseInt(el.logoWidthRange.value) || 150) * scale));
+      const lHeight = (logoImg.height / logoImg.width) * lWidth;
+      const lOpacity = parseFloat(el.logoOpacityRange.value);
+      const margin = 40 * scale;
+      let posX, posY;
+      switch (currentLogoPos) {
+        case 'tl': posX = margin; posY = margin; break;
+        case 'tc': posX = (width - lWidth) / 2; posY = margin; break;
+        case 'tr': posX = width - lWidth - margin; posY = margin; break;
+        case 'ml': posX = margin; posY = (height - lHeight) / 2; break;
+        case 'mc': posX = (width - lWidth) / 2; posY = (height - lHeight) / 2; break;
+        case 'mr': posX = width - lWidth - margin; posY = (height - lHeight) / 2; break;
+        case 'bl': posX = margin; posY = height - lHeight - margin; break;
+        case 'bc': posX = (width - lWidth) / 2; posY = height - lHeight - margin; break;
+        case 'br': posX = width - lWidth - margin; posY = height - lHeight - margin; break;
+      }
+      targetCtx.save(); targetCtx.globalAlpha = lOpacity; targetCtx.drawImage(logoImg, posX, posY, lWidth, lHeight); targetCtx.restore();
+    }
+  }
+
+  function syncOverlayWithImage() {
+    if(!previewImg.complete) return;
+    const rect = previewImg.getBoundingClientRect();
+    wmOverlay.style.left = '0px';
+    wmOverlay.style.top = '0px';
+    wmOverlay.width = rect.width;
+    wmOverlay.height = rect.height;
+    
+    const renderScale = rect.width / previewImg.naturalWidth;
+    drawWatermarkContent(overlayCtx, wmOverlay.width, wmOverlay.height, renderScale);
+  }
+
+  function syncOverlayWithCropper() {
+    if(!cropper) return;
+    const cropBoxData = cropper.getCropBoxData();
+    const canvasData = cropper.getCanvasData();
+    const imageData = cropper.getImageData();
+    
+    wmOverlay.style.left = cropBoxData.left + 'px';
+    wmOverlay.style.top = cropBoxData.top + 'px';
+    wmOverlay.width = cropBoxData.width;
+    wmOverlay.height = cropBoxData.height;
+
+    const renderScale = canvasData.width / imageData.naturalWidth;
+    drawWatermarkContent(overlayCtx, wmOverlay.width, wmOverlay.height, renderScale);
+  }
+
+  let renderQueued = false;
+  function scheduleOverlayRender() {
+    if (!renderQueued) { 
+      renderQueued = true; 
+      requestAnimationFrame(() => { 
+        renderQueued = false; 
+        if(cropper) syncOverlayWithCropper();
+        else syncOverlayWithImage();
+      }); 
+    } 
+  }
+
+  window.addEventListener('resize', scheduleOverlayRender);
+
+  async function renderExportBlob(item, formatInfo, sharedCanvas, sharedCtx) {
+    const { img, url } = await decodeToImage(item.file);
+    
+    let sourceX = 0, sourceY = 0, sourceW = img.width, sourceH = img.height;
+    
+    if(document.getElementById('enableCrop').checked) {
+      if (item.cropData) {
+        sourceX = item.cropData.x;
+        sourceY = item.cropData.y;
+        sourceW = item.cropData.width;
+        sourceH = item.cropData.height;
+      } else {
+        const ratio = document.getElementById('cropRatio').value;
+        if (ratio !== 'free') {
+          const targetRatio = parseFloat(ratio);
+          const imgRatio = img.width / img.height;
+          if (imgRatio > targetRatio) {
+            sourceW = img.height * targetRatio;
+            sourceH = img.height;
+            sourceX = (img.width - sourceW) / 2;
+          } else {
+            sourceW = img.width;
+            sourceH = img.width / targetRatio;
+            sourceY = (img.height - sourceH) / 2;
+          }
+        }
+      }
+      
+      if(sourceX < 0) sourceX = 0;
+      if(sourceY < 0) sourceY = 0;
+      if(sourceX + sourceW > img.width) sourceW = img.width - sourceX;
+      if(sourceY + sourceH > img.height) sourceH = img.height - sourceY;
+    }
+
+    let actualScaleFactor = parseFloat(document.getElementById('exportScale').value) || 1;
+    
+    // Nếu user đã ấn Áp dụng kích thước mục tiêu
+    if (item.targetExportW && item.targetExportH) {
+      sharedCanvas.width = item.targetExportW;
+      sharedCanvas.height = item.targetExportH;
+      actualScaleFactor = item.targetExportW / sourceW;
+    } else {
+      sharedCanvas.width = Math.max(1, Math.round(sourceW * actualScaleFactor));
+      sharedCanvas.height = Math.max(1, Math.round(sourceH * actualScaleFactor));
+    }
+    
+    if (formatInfo.mime === 'image/jpeg') {
+      sharedCtx.fillStyle = '#ffffff'; 
+      sharedCtx.fillRect(0, 0, sharedCanvas.width, sharedCanvas.height);
+    } else {
+      sharedCtx.clearRect(0, 0, sharedCanvas.width, sharedCanvas.height);
+    }
+    
+    sharedCtx.drawImage(img, sourceX, sourceY, sourceW, sourceH, 0, 0, sharedCanvas.width, sharedCanvas.height);
+    drawWatermarkContent(sharedCtx, sharedCanvas.width, sharedCanvas.height, actualScaleFactor, false);
+    
+    const limitEnabled = document.getElementById('enableSizeLimit').checked;
+    const targetBytes = (parseInt(document.getElementById('targetSizeKB').value) || 500) * 1024;
+    
+    let finalBlob = null;
+    if(formatInfo.mime === 'image/jpeg' && limitEnabled) {
+      let minQ = 0.1, maxQ = 0.95, q = 0.8;
+      for (let i = 0; i < 6; i++) {
+        q = (minQ + maxQ) / 2;
+        let blob = await new Promise(res => sharedCanvas.toBlob(res, formatInfo.mime, q));
+        finalBlob = blob;
+        if (blob.size > targetBytes) maxQ = q; 
+        else { minQ = q; if (targetBytes - blob.size < targetBytes * 0.05) break; }
+      }
+    } else {
+      finalBlob = await new Promise(resolve => sharedCanvas.toBlob(resolve, formatInfo.mime, formatInfo.quality));
+    }
+    
+    URL.revokeObjectURL(url);
+    return finalBlob;
+  }
+
+  function getFormatInfo() {
+    const fmt = document.getElementById('exportFormat').value;
+    return { mime: fmt === 'jpeg' ? 'image/jpeg' : 'image/png', ext: fmt === 'jpeg' ? '.jpg' : '.png', quality: 0.92 };
+  }
+
+  downloadBtn.addEventListener('click', async () => {
+    if (currentIndex === -1) return;
+    downloadBtn.disabled = true;
+    const item = images[currentIndex];
+    
+    if(cropper) item.cropData = cropper.getData();
+
+    const formatInfo = getFormatInfo();
+    const sharedCanvas = document.createElement('canvas'); 
+    const sharedCtx = sharedCanvas.getContext('2d');
+
+    try {
+      showProgress("Đang xuất ảnh...");
+      const blob = await renderExportBlob(item, formatInfo, sharedCanvas, sharedCtx);
+      const link = document.createElement('a');
+      link.download = 'watermarked_' + item.name.replace(/\.[^/.]+$/, '') + formatInfo.ext;
+      link.href = URL.createObjectURL(blob); link.click();
+      setTimeout(() => URL.revokeObjectURL(link.href), 5000);
+    } catch (err) { showToast('Có lỗi khi xử lý ảnh: ' + item.name, 'error'); console.error(err); }
+    hideProgress(); 
+    
+    sharedCanvas.width = 0; sharedCanvas.height = 0;
+    downloadBtn.disabled = false;
+  });
+
+  downloadAllBtn.addEventListener('click', async () => {
+    const selectedItems = images.filter(img => img.selected);
+    if (selectedItems.length === 0) return;
+    downloadAllBtn.disabled = true; downloadBtn.disabled = true;
+    
+    if(cropper && images[currentIndex]) images[currentIndex].cropData = cropper.getData();
+
+    const total = selectedItems.length;
+    showProgress(`Đang xử lý 0/${total}...`);
+
+    const zip = new JSZip();
+    const formatInfo = getFormatInfo();
+    const usedNames = new Set();
+    const failed = []; 
+    let done = 0;
+    
+    const sharedCanvas = document.createElement('canvas'); 
+    const sharedCtx = sharedCanvas.getContext('2d');
+    
+    for (const item of selectedItems) {
+      try {
+        const blob = await renderExportBlob(item, formatInfo, sharedCanvas, sharedCtx);
+        let baseName = 'watermarked_' + item.name.replace(/\.[^/.]+$/, '') + formatInfo.ext;
+        let safeName = baseName, n = 1;
+        while (usedNames.has(safeName)) { safeName = baseName.replace(formatInfo.ext, `_${n}${formatInfo.ext}`); n++; }
+        usedNames.add(safeName); zip.file(safeName, blob);
+      } catch (err) { failed.push(item.name); console.error('Lỗi ảnh:', item.name, err); }
+      
+      done++; setProgress(done, total, `Đang xử lý ${done}/${total}...`);
+      await new Promise(r => setTimeout(r, 10)); 
+    }
+
+    if (usedNames.size === 0) {
+      hideProgress();
+      sharedCanvas.width = 0; sharedCanvas.height = 0;
+      showToast(`Không xuất được ảnh nào (${failed.length} ảnh lỗi). Vui lòng thử lại.`, 'error', 8000);
+      updateDownloadAllState(); downloadBtn.disabled = images.length === 0;
+      return;
+    }
+
+    setProgress(total, total, 'Đang nén file zip...');
+    const blob = await zip.generateAsync({ type: 'blob' }, (meta) => { setProgress(100, 100, `Đang nén... ${Math.round(meta.percent)}%`); });
+    const link = document.createElement('a'); link.download = 'isc-watermarked-images.zip'; link.href = URL.createObjectURL(blob); link.click();
+    setTimeout(() => URL.revokeObjectURL(link.href), 5000);
+    
+    sharedCanvas.width = 0; sharedCanvas.height = 0;
+    hideProgress(); updateDownloadAllState(); downloadBtn.disabled = images.length === 0;
+
+    if (failed.length > 0) {
+      const shown = failed.slice(0, 3).join(', ');
+      const more = failed.length > 3 ? ` và ${failed.length - 3} ảnh khác` : '';
+      showToast(`Đã xuất ${usedNames.size}/${total} ảnh. Bỏ qua ${failed.length} ảnh lỗi: ${shown}${more}`, 'warning', 9000);
+    } else {
+      showToast(`Đã xuất xong ${usedNames.size} ảnh vào file zip.`, 'success', 4000);
+    }
+  });
+</script>
+</body>
+</html>
