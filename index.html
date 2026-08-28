@@ -37,14 +37,12 @@
     .main-area { flex: 1; display: flex; flex-direction: column; background: #e5e5ea; min-width: 260px; position: relative; }
     .sidebar-right { width: clamp(250px, 24vw, 340px); border-left: 1px solid var(--border); padding: 20px; overflow-y: auto; z-index: 10; display: flex; flex-direction: column; }
 
-    /* Màn hình laptop hẹp (~13 inch): thu nhỏ padding/sidebar để vùng xem ảnh không bị bóp quá nhỏ */
     @media (max-width: 980px) {
       .sidebar-left { width: 190px; padding: 14px; }
       .sidebar-right { width: 230px; padding: 14px; }
       .control-section { padding: 12px; margin-bottom: 16px; }
       .topbar { padding: 8px 12px; }
     }
-    /* Màn hình rất hẹp (tablet dọc / điện thoại): xếp dọc thay vì 3 cột ngang */
     @media (max-width: 700px) {
       body { flex-direction: column; height: auto; min-height: 100vh; overflow-y: auto; }
       .sidebar-left, .sidebar-right, .main-area { width: 100%; min-width: 0; }
@@ -154,11 +152,6 @@
     .cropper-view-box, .cropper-face { border-radius: 0; }
     .cropper-line, .cropper-point { background-color: var(--primary) !important; }
 
-    /* Toast thông báo (thay cho alert() thô) */
-    /* z-index toast PHẢI cao hơn modal-backdrop (1002): trước đây toast-container chỉ có
-       z-index 1001, thấp hơn lớp nền mờ (blur) của popup báo lỗi (1002) - nên khi bấm
-       Gửi mà chưa nhập nội dung, toast cảnh báo bị chính lớp nền mờ của popup che khuất,
-       trông như không có cảnh báo nào hiện ra. */
     .toast-container { position: fixed; top: 20px; right: 20px; z-index: 1010; display: flex; flex-direction: column; gap: 10px; max-width: 360px; }
     .toast { background: var(--panel); backdrop-filter: blur(var(--blur)); -webkit-backdrop-filter: blur(var(--blur)); border: 1px solid rgba(255,255,255,0.5); border-radius: var(--radius); padding: 12px 14px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); font-size: 13px; color: var(--text); display: flex; gap: 10px; align-items: flex-start; line-height: 1.5; animation: toast-in .25s ease; border-left: 4px solid var(--text-muted); }
     .toast.error { border-left-color: #ff3b30; }
@@ -168,21 +161,17 @@
     .toast-close { flex: none; cursor: pointer; background: none; border: none; color: var(--text-muted); font-size: 16px; line-height: 1; padding: 0; }
     @keyframes toast-in { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: translateX(0); } }
 
-    /* Badge nhỏ báo ảnh đã được crop riêng, khác với cài đặt watermark chung của cả lô */
     .thumb-img-wrap { position: relative; flex: none; }
     .crop-badge { position: absolute; left: -4px; top: -4px; width: 16px; height: 16px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 3px rgba(0,0,0,0.35); border: 1.5px solid #fff; }
 
-    /* Kéo-thả sắp xếp lại thứ tự ảnh trong danh sách */
     .thumb-item[draggable="true"] { cursor: grab; }
     .thumb-item.dragging { opacity: 0.4; }
     .thumb-item.drag-over-top { box-shadow: inset 0 2px 0 var(--primary); }
     .thumb-item.drag-over-bottom { box-shadow: inset 0 -2px 0 var(--primary); }
 
-    /* Nút info / báo lỗi */
     .icon-btn { width: 32px; height: 32px; padding: 0; border-radius: 50%; background: rgba(142,142,147,0.15); color: var(--text-muted); border: 1px solid rgba(0,0,0,0.05); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all .2s; flex: none; }
     .icon-btn:hover { background: rgba(0,122,255,0.12); color: var(--primary); }
 
-    /* Popup báo lỗi (modal) */
     .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.35); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 1002; padding: 20px; }
     .modal-backdrop.open { display: flex; }
     .modal-box { background: #fff; border-radius: 18px; width: 100%; max-width: 420px; padding: 22px; box-shadow: 0 20px 60px rgba(0,0,0,0.25); max-height: 88vh; overflow-y: auto; }
@@ -226,7 +215,7 @@
     <div class="footer-brand">
       <div class="brand-name">Phát triển bởi Bảo Kỳ</div>
       <div class="brand-desc">Lưu hành nội bộ ISC</div>
-      <div class="version-badge">Bản Chính Thức v1.1.7</div>
+      <div class="version-badge">Bản Chính Thức v1.1.8</div>
     </div>
   </div>
 
@@ -305,14 +294,14 @@
         <div class="grid-2">
           <div class="control-group">
             <label>Rộng (px)</label>
-            <input type="number" id="cropWNum" placeholder="Tự động">
+            <input type="number" id="cropWNum" placeholder="VD: 900">
           </div>
           <div class="control-group">
             <label>Cao (px)</label>
-            <input type="number" id="cropHNum" placeholder="Tự động">
+            <input type="number" id="cropHNum" placeholder="VD: 630">
           </div>
         </div>
-        <button class="btn secondary" id="applyCropBtn" style="width:100%; padding: 6px; font-size:12px;">Áp dụng kích thước</button>
+        <button class="btn secondary" id="applyCropBtn" style="width:100%; padding: 6px; font-size:12px;">Áp dụng cho TẤT CẢ ảnh</button>
       </div>
 
       <hr style="border:0; border-top:1px dashed rgba(0,0,0,0.1); margin: 15px 0;">
@@ -478,7 +467,6 @@
 <!-- Thư viện tạo file Zip -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script>
-  // --- STATE & HISTORY (UNDO/REDO) ---
   let historyStack = [];
   let historyIndex = -1;
   let isUndoRedoAction = false;
@@ -490,11 +478,9 @@
       cropRatio: document.getElementById('cropRatio').value,
       cropWNum: document.getElementById('cropWNum').value,
       cropHNum: document.getElementById('cropHNum').value,
-
       exportScale: document.getElementById('exportScale').value,
       enableSizeLimit: document.getElementById('enableSizeLimit').checked,
       targetSizeKB: document.getElementById('targetSizeKB').value,
-
       enableText: document.getElementById('enableText').checked,
       wmText: document.getElementById('wmText').value,
       wmLayout: document.getElementById('wmLayout').value,
@@ -502,7 +488,6 @@
       wmDensity: document.getElementById('wmDensityRange').value,
       wmColor: document.getElementById('wmColor').value,
       wmOpacity: document.getElementById('wmOpacityRange').value,
-      
       enableLogo: document.getElementById('enableLogo').checked,
       logoPosition: currentLogoPos,
       logoWidth: document.getElementById('logoWidthRange').value,
@@ -543,7 +528,7 @@
 
     toggleSections();
     updateWmDensityVisibility();
-    handleCropToggle(); // Apply cropper state
+    handleCropToggle(); 
     scheduleOverlayRender();
     
     setTimeout(() => { isUndoRedoAction = false; }, 50);
@@ -577,11 +562,6 @@
   
   document.addEventListener('keydown', (e) => {
     const t = e.target;
-    // Đang gõ trong 1 ô nhập CHỮ/SỐ thật sự (vd đang sửa nội dung watermark) -> để trình duyệt
-    // tự xử lý Ctrl+Z của riêng ô đó, không cướp sang Undo/Redo toàn cục của app.
-    // Lỗi cũ: mọi thẻ <input> đều bị coi là "đang nhập liệu", kể cả range/checkbox/color/file -
-    // nên sau khi kéo 1 thanh trượt (nó vẫn đang giữ focus), bấm Ctrl+Z sẽ bị bỏ qua vì
-    // trình duyệt không có undo cho range input, khiến Undo/Redo trông như không hoạt động.
     const textEditableTypes = ['text', 'number', 'search', 'email', 'url', 'tel', 'password'];
     const isEditable = t && (
       (t.tagName === 'INPUT' && textEditableTypes.includes(t.type)) ||
@@ -598,7 +578,6 @@
 
     if (isEditable) return;
 
-    // Mũi tên trái/phải: chuyển ảnh đang xem trong danh sách
     if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
       if (images.length === 0) return;
       e.preventDefault();
@@ -606,7 +585,6 @@
       newIndex = Math.max(0, Math.min(images.length - 1, newIndex));
       if (newIndex !== currentIndex) { saveCurrentCropData(); currentIndex = newIndex; renderThumbnails(); loadCurrentImage(); }
     }
-    // Phím Delete: xóa nhanh ảnh ĐANG XEM (không cần tick chọn) để duyệt ảnh + xóa liên tục cho nhanh
     else if (e.key === 'Delete') {
       if (currentIndex === -1) return;
       e.preventDefault();
@@ -614,11 +592,6 @@
     }
   });
 
-  // Luôn chốt lại vị trí crop của ảnh đang xem trước khi rời sang ảnh khác.
-  // Trước đây việc lưu cropData chỉ trông chờ vào sự kiện 'crop' bắn ra lúc kéo/thả
-  // chuột trên khung crop; nếu người dùng thao tác xong mà sự kiện chưa kịp lưu
-  // (hoặc lưu bị chặn bởi cờ cropperUpdating ở nơi khác) thì lúc quay lại ảnh đó,
-  // crop sẽ bị trả về mặc định. Gọi hàm này ngay trước mỗi lần đổi currentIndex.
   function saveCurrentCropData() {
     if (cropper && images[currentIndex]) {
       images[currentIndex].cropData = cropper.getData();
@@ -636,7 +609,6 @@
     showToast(`Đã xóa khỏi danh sách: ${removed.name}`, 'success', 2200);
   }
 
-  // --- GRID ANCHOR ---
   const gridCells = document.querySelectorAll('.anchor-cell');
   function setAnchorActive(pos) {
     currentLogoPos = pos;
@@ -649,13 +621,10 @@
     cell.addEventListener('click', () => { setAnchorActive(cell.dataset.pos); saveHistory(); scheduleOverlayRender(); });
   });
 
-  // --- CORE VARS ---
   let images = [];       
   let currentIndex = -1;
   let logoImg = null;    
   let imageIdCounter = 0;
-
-  // Cropper & UI
   let cropper = null;
   let currentImgUrl = null; 
   let cropperUpdating = false;
@@ -665,8 +634,6 @@
   const wmOverlay = document.getElementById('wmOverlay');
   const overlayCtx = wmOverlay.getContext('2d');
 
-  // Cache sẵn các control watermark - drawWatermarkContent() chạy trên mỗi khung hình lúc kéo thanh
-  // trượt (qua requestAnimationFrame), nên tránh gọi lại document.getElementById() nhiều lần mỗi khung hình.
   const el = {
     enableText: document.getElementById('enableText'),
     wmText: document.getElementById('wmText'),
@@ -690,8 +657,8 @@
   const progressFill = document.getElementById('progressFill');
   const progressLabel = document.getElementById('progressLabel');
   const progressPercent = document.getElementById('progressPercent');
-
   const toastContainer = document.getElementById('toastContainer');
+
   function showToast(message, type = 'error', duration = 6000) {
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
@@ -712,7 +679,6 @@
   function setProgress(current, total, label) { const pct = total > 0 ? Math.round((current / total) * 100) : 0; progressFill.style.width = pct + '%'; progressPercent.textContent = pct + '%'; if (label) progressLabel.textContent = label; }
   function hideProgress() { progressBar.style.display = 'none'; }
 
-  // --- IMAGES ---
   function decodeToImage(file) {
     return new Promise((resolve, reject) => {
       const url = URL.createObjectURL(file);
@@ -742,7 +708,7 @@
     if (filesArray.length === 0) return;
     showProgress(`Đang tải 0/${filesArray.length}...`);
     let added = 0;
-    const failed = []; // gom lỗi lại để báo 1 lần cho người dùng, thay vì chỉ console.error âm thầm
+    const failed = []; 
     for (const file of filesArray) {
       if(!file.type.startsWith('image/')) { failed.push(`${file.name} (không phải file ảnh)`); added++; setProgress(added, filesArray.length, `Đang tải ${added}/${filesArray.length}...`); continue; }
       try {
@@ -784,7 +750,6 @@
     saveHistory(); scheduleOverlayRender();
   });
 
-  // --- LIST ---
   function updateSelectAllState() {
     if(images.length === 0) { selectAllCheckbox.checked = false; selectAllCheckbox.indeterminate = false; selectAllCheckbox.disabled = true; deleteSelectedBtn.disabled = true; return; }
     selectAllCheckbox.disabled = false;
@@ -794,7 +759,6 @@
     else { selectAllCheckbox.checked = false; selectAllCheckbox.indeterminate = true; deleteSelectedBtn.disabled = false; }
   }
 
-  // Nút "Tải" chỉ bật khi có ít nhất 1 ảnh được chọn (chọn lẻ hoặc bấm Chọn tất cả)
   function updateDownloadAllState() {
     const selectedCount = images.filter(img => img.selected).length;
     downloadAllBtn.disabled = selectedCount === 0;
@@ -811,9 +775,7 @@
   deleteSelectedBtn.addEventListener('click', () => {
     const count = images.filter(img => img.selected).length;
     if (count === 0) return;
-    // Lưu ý: việc xóa ảnh KHÔNG nằm trong hệ Undo/Redo (hệ đó chỉ theo dõi cài đặt watermark/crop),
-    // nên đây là lớp an toàn duy nhất trước khi mất ảnh khỏi danh sách đang làm việc.
-    if (!confirm(`Xóa ${count} ảnh đã chọn khỏi danh sách?\n(File gốc trên máy tính không bị ảnh hưởng, chỉ xóa khỏi danh sách đang làm việc trong tool này)`)) return;
+    if (!confirm(`Xóa ${count} ảnh đã chọn khỏi danh sách?\n(File gốc trên máy tính không bị ảnh hưởng)`)) return;
     saveCurrentCropData();
     const currentId = images[currentIndex] ? images[currentIndex].id : -1;
     images = images.filter(img => !img.selected);
@@ -845,8 +807,6 @@
         const imgEl = document.createElement('img'); imgEl.src = item.thumbUrl; imgEl.loading = 'lazy';
         imgWrap.appendChild(imgEl);
         if (item.cropData) {
-          // Báo riêng ảnh này đã bị crop lệch khỏi mặc định - tránh nhầm lẫn vì crop là theo từng ảnh,
-          // còn watermark là cài đặt chung cho cả lô.
           const badge = document.createElement('div');
           badge.className = 'crop-badge';
           badge.title = 'Ảnh này đã được crop/cắt riêng';
@@ -858,7 +818,6 @@
         div.appendChild(checkbox); div.appendChild(imgWrap); div.appendChild(nameEl);
         div.onclick = (e) => { if(e.target === checkbox) return; if (currentIndex === index) return; saveCurrentCropData(); currentIndex = index; renderThumbnails(); loadCurrentImage(); };
 
-        // Kéo-thả để sắp xếp lại thứ tự ảnh trong danh sách
         div.addEventListener('dragstart', (e) => {
           dragSrcIndex = index;
           div.classList.add('dragging');
@@ -887,7 +846,7 @@
           const isAfter = (e.clientY - rect.top) > rect.height / 2;
           const currentId = images[currentIndex] ? images[currentIndex].id : -1;
           let targetIndex = index + (isAfter ? 1 : 0);
-          if (dragSrcIndex < targetIndex) targetIndex--; // bù trừ vì phần tử nguồn bị xóa trước khi chèn lại
+          if (dragSrcIndex < targetIndex) targetIndex--; 
           moveImage(dragSrcIndex, targetIndex);
           dragSrcIndex = null;
           currentIndex = images.findIndex(img => img.id === currentId);
@@ -904,13 +863,8 @@
     document.getElementById('statusText').innerText = hasImages ? `Đang xem: ${images[currentIndex].name}` : 'Chưa có ảnh nào';
   }
 
-  // --- SYNC & LISTENERS ---
   function syncInputs(rangeId, numId, multiplier = 1) {
     const range = document.getElementById(rangeId), num = document.getElementById(numId);
-    // 'input' bắn liên tục khi đang kéo -> chỉ dùng để xem trước trực tiếp, KHÔNG lưu lịch sử ở đây.
-    // 'change' chỉ bắn 1 lần khi thả tay/rời ô -> đây mới là lúc lưu 1 bước Undo/Redo.
-    // (Trước đây saveHistory() nằm trong 'input' nên kéo 1 thanh trượt là tạo ra vài chục bước lịch sử vụn,
-    // đẩy trôi hết các bước quan trọng trước đó ra khỏi giới hạn 50 bước.)
     range.addEventListener('input', () => { num.value = Math.round(range.value * multiplier); scheduleOverlayRender(); });
     range.addEventListener('change', () => { saveHistory(); });
     num.addEventListener('input', () => { let val = parseFloat(num.value) / multiplier; if (val < range.min) val = range.min; if (val > range.max) val = range.max; range.value = val; scheduleOverlayRender(); });
@@ -920,8 +874,6 @@
   syncInputs('logoWidthRange', 'logoWidthNum', 1);
   syncInputs('logoOpacityRange', 'logoOpacityNum', 100);
 
-  // Đồng bộ riêng cho mật độ watermark vì đây là số thập phân (0.4 - 3, bước 0.1),
-  // syncInputs() ở trên làm tròn về số nguyên (Math.round) nên không dùng được cho ô này.
   (function syncDensityInputs() {
     const range = document.getElementById('wmDensityRange'), num = document.getElementById('wmDensityNum');
     range.addEventListener('input', () => { num.value = range.value; scheduleOverlayRender(); });
@@ -937,7 +889,6 @@
     num.addEventListener('change', () => { saveHistory(); });
   })();
 
-  // Ô mật độ chỉ có ý nghĩa với kiểu bố trí "Lưới chéo lặp lại" -> ẩn đi khi chọn kiểu khác.
   function updateWmDensityVisibility() {
     const isGrid = document.getElementById('wmLayout').value === 'grid';
     document.getElementById('wmDensityGroup').style.display = isGrid ? '' : 'none';
@@ -968,18 +919,13 @@
     if(el.type === 'text' || el.type === 'color' || el.type === 'number') el.addEventListener('input', scheduleOverlayRender);
   });
 
-  // --- POPUP BÁO LỖI ---
   const REPORT_BUG_EMAIL = 'lebaokybf4@gmail.com';
   const reportBugBackdrop = document.getElementById('reportBugBackdrop');
   const reportBugSubject = document.getElementById('reportBugSubject');
   const reportBugDetail = document.getElementById('reportBugDetail');
 
-  function openReportBugModal() {
-    reportBugBackdrop.classList.add('open');
-  }
-  function closeReportBugModal() {
-    reportBugBackdrop.classList.remove('open');
-  }
+  function openReportBugModal() { reportBugBackdrop.classList.add('open'); }
+  function closeReportBugModal() { reportBugBackdrop.classList.remove('open'); }
   document.getElementById('reportBugBtn').addEventListener('click', openReportBugModal);
   document.getElementById('reportBugCloseBtn').addEventListener('click', closeReportBugModal);
   document.getElementById('reportBugCancelBtn').addEventListener('click', closeReportBugModal);
@@ -1007,7 +953,6 @@
   setAnchorActive('br');
   saveHistory();
 
-  // --- CROPPER LOGIC ---
   function handleCropToggle() {
     const cropOn = document.getElementById('enableCrop').checked;
     document.getElementById('cropControls').style.opacity = cropOn ? '1' : '0.4';
@@ -1026,19 +971,19 @@
   function initCropper() {
     if(cropper) cropper.destroy();
     
-    let ratio = document.getElementById('cropRatio').value;
-    let aspectRatio = ratio === 'free' ? NaN : parseFloat(ratio);
+    const globalW = parseFloat(document.getElementById('cropWNum').value);
+    const globalH = parseFloat(document.getElementById('cropHNum').value);
+    let aspectRatio = NaN;
     
-    // QUAN TRỌNG: phải đọc và chốt cropData đã lưu NGAY TỪ TRƯỚC khi khởi tạo Cropper,
-    // rồi giữ trong 1 biến closure (savedDataForRestore) - không được đọc lại từ mảng
-    // images[] bên trong callback ready() như trước đây.
-    // Lý do lỗi cũ (khiến crop luôn về mặc định khi chuyển ảnh rồi quay lại):
-    // chính Cropper.js tự bắn ra 1 sự kiện 'crop' với khung mặc định (autoCropArea)
-    // ngay trong lúc dựng khung crop ban đầu, và sự kiện này xảy ra TRƯỚC callback
-    // 'ready'. Vì cờ cropperUpdating lúc đó vẫn là false (chưa kịp bật), handler
-    // crop(event) bên dưới chạy bình thường và LƯU ĐÈ khung mặc định vào
-    // images[currentIndex].cropData - xóa mất dữ liệu crop cũ đã lưu. Đến khi ready()
-    // chạy và đọc images[currentIndex].cropData thì dữ liệu đã bị ghi đè mất rồi.
+    // Nếu User đã nhập số cụ thể, ưu tiên khóa tỷ lệ đó cho toàn cục
+    if (globalW > 0 && globalH > 0) {
+        aspectRatio = globalW / globalH;
+    } else {
+        // Nếu không, quay về tỷ lệ của dropdown
+        let ratio = document.getElementById('cropRatio').value;
+        aspectRatio = ratio === 'free' ? NaN : parseFloat(ratio);
+    }
+    
     const savedDataForRestore = images[currentIndex] && images[currentIndex].cropData;
     
     cropper = new Cropper(previewImg, {
@@ -1049,16 +994,11 @@
       autoCropArea: 0.9,
       ready() {
         if(savedDataForRestore) {
-           // Gọi setData() ngay trong ready() đôi khi bị Cropper.js tính toán sai vì
-           // kích thước canvas nội bộ chưa kịp ổn định -> phải đợi 1 khung hình (rAF)
-           // rồi mới set lại, để chắc chắn khung crop về đúng vị trí đã lưu.
            requestAnimationFrame(() => {
              if(!cropper) return;
              cropperUpdating = true;
              cropper.setData(savedDataForRestore);
              cropperUpdating = false;
-             // Lưu lại ngay sau khi restore để đồng bộ (setData có thể làm tròn số
-             // khác đôi chút so với dữ liệu đã lưu ban đầu).
              if(images[currentIndex]) images[currentIndex].cropData = cropper.getData();
              syncOverlayWithCropper();
            });
@@ -1067,8 +1007,6 @@
       },
       crop(event) {
         if(cropperUpdating) return;
-        document.getElementById('cropWNum').value = Math.round(event.detail.width);
-        document.getElementById('cropHNum').value = Math.round(event.detail.height);
         
         if(images[currentIndex]) {
           images[currentIndex].cropData = cropper.getData();
@@ -1079,6 +1017,9 @@
   }
 
   document.getElementById('cropRatio').addEventListener('change', (e) => {
+    // Nếu đổi tỷ lệ ở thẻ Select, xóa đi số người dùng đã nhập để về dạng Free
+    document.getElementById('cropWNum').value = '';
+    document.getElementById('cropHNum').value = '';
     if(!cropper) return;
     let val = e.target.value;
     cropper.setAspectRatio(val === 'free' ? NaN : parseFloat(val));
@@ -1090,14 +1031,24 @@
     const w = parseFloat(document.getElementById('cropWNum').value);
     const h = parseFloat(document.getElementById('cropHNum').value);
     if(w > 0 && h > 0) {
-      cropperUpdating = true;
-      cropper.setData({ width: w, height: h });
-      cropperUpdating = false;
-      // Lỗi cũ: setData() bị chặn bởi cờ cropperUpdating nên sự kiện 'crop' không lưu lại
-      // cropData của ảnh đang xem -> khi chuyển qua ảnh khác rồi quay lại, crop bị mất, về mặc định.
-      if(images[currentIndex]) images[currentIndex].cropData = cropper.getData();
+      // 1. Khóa tỷ lệ (Aspect Ratio)
+      cropper.setAspectRatio(w / h);
+      
+      // 2. Tự động phóng to khung cắt ra tối đa phủ kín ảnh
+      const containerData = cropper.getContainerData();
+      cropper.setCropBoxData({
+        left: 0,
+        top: 0,
+        width: containerData.width,
+        height: containerData.height
+      });
+      
+      if(images[currentIndex]) {
+        images[currentIndex].cropData = cropper.getData();
+      }
       syncOverlayWithCropper();
       saveHistory();
+      showToast(`Đã khóa kích thước ${w}x${h}px cho TẤT CẢ ảnh. Khung cắt đã được tự động phóng to.`, 'success', 4000);
     }
   });
 
@@ -1127,7 +1078,6 @@
     previewImg.src = currentImgUrl;
   }
 
-  // --- WATERMARK RENDERING ---
   function buildGridTile(text, size, color, opacity, gap) {
     const tile = document.createElement('canvas'); tile.width = gap; tile.height = gap; const tctx = tile.getContext('2d');
     tctx.font = `bold ${size}px "SF Pro Text", Arial, sans-serif`; tctx.fillStyle = color; tctx.globalAlpha = opacity; tctx.textAlign = 'center'; tctx.textBaseline = 'middle';
@@ -1145,19 +1095,13 @@
       const layout = el.wmLayout.value;
       if (text) {
         if (layout === 'grid') {
-          // Đo bề rộng thực tế của chữ để tính kích thước ô lặp (tile) đủ lớn.
-          // Trước đây gap chỉ phụ thuộc vào cỡ chữ (size*6), nên chữ càng dài càng
-          // dễ bị tràn ra ngoài tile và bị canvas cắt mất phần thừa (~14 ký tự trở lên).
           targetCtx.save();
           targetCtx.font = `bold ${size}px "SF Pro Text", Arial, sans-serif`;
           const textWidth = targetCtx.measureText(text).width;
           targetCtx.restore();
           const angle = 30 * Math.PI / 180;
-          // Diện tích chiếm chỗ của chữ sau khi xoay -30deg (hình chữ nhật bao ngoài)
           const rotatedSpan = textWidth * Math.cos(angle) + size * Math.sin(angle);
           const baseGap = Math.max(rotatedSpan * 1.4, size * 6, 150 * scale);
-          // Mật độ watermark: bội số > 1 rút ngắn khoảng cách lặp (dày hơn), < 1 kéo dài ra (thưa hơn).
-          // Có sàn tối thiểu (size * 1.5) để chữ không đè chồng lên nhau quá mức khi kéo mật độ lên cao.
           const density = parseFloat(el.wmDensityRange.value) || 1;
           const gap = Math.max(baseGap / density, size * 1.5);
           const pattern = targetCtx.createPattern(buildGridTile(text, size, color, opacity, gap), 'repeat');
@@ -1234,50 +1178,64 @@
 
   window.addEventListener('resize', scheduleOverlayRender);
 
-  // --- EXPORT (SỬA LỖI ĐEN HÌNH VÀ MEMORY LEAK) ---
-  // Sử dụng chung 1 Canvas để không bị tràn bộ nhớ khi xuất hàng ngàn ảnh lớn.
   async function renderExportBlob(item, formatInfo, sharedCanvas, sharedCtx) {
     const { img, url } = await decodeToImage(item.file);
     
     let sourceX = 0, sourceY = 0, sourceW = img.width, sourceH = img.height;
     
+    // Lấy thông số Global Export nếu người dùng có gõ vào ô
+    const globalW = parseFloat(document.getElementById('cropWNum').value);
+    const globalH = parseFloat(document.getElementById('cropHNum').value);
+    const hasGlobalTarget = globalW > 0 && globalH > 0;
+    
     if(document.getElementById('enableCrop').checked) {
       if (item.cropData) {
-        // Ảnh này đã được người dùng chủ động điều chỉnh crop
         sourceX = item.cropData.x;
         sourceY = item.cropData.y;
         sourceW = item.cropData.width;
         sourceH = item.cropData.height;
       } else {
-        // Ảnh này chưa được click vào, ta tự động tính toán crop ngay chính giữa dựa theo tỉ lệ đang chọn (Batch Crop)
-        const ratio = document.getElementById('cropRatio').value;
-        if (ratio !== 'free') {
-          const targetRatio = parseFloat(ratio);
-          const imgRatio = img.width / img.height;
-          if (imgRatio > targetRatio) {
-            // Ảnh rộng hơn tỉ lệ -> cắt 2 bên
-            sourceW = img.height * targetRatio;
-            sourceH = img.height;
-            sourceX = (img.width - sourceW) / 2;
-          } else {
-            // Ảnh cao hơn tỉ lệ -> cắt trên dưới
-            sourceW = img.width;
-            sourceH = img.width / targetRatio;
-            sourceY = (img.height - sourceH) / 2;
-          }
+        // Tự động tính vùng crop chính giữa ảnh nếu chưa được thao tác
+        let targetRatio = null;
+        if (hasGlobalTarget) {
+            targetRatio = globalW / globalH;
+        } else {
+            const ratio = document.getElementById('cropRatio').value;
+            if (ratio !== 'free') targetRatio = parseFloat(ratio);
+        }
+        
+        if (targetRatio) {
+            const imgRatio = img.width / img.height;
+            if (imgRatio > targetRatio) {
+                sourceW = img.height * targetRatio;
+                sourceH = img.height;
+                sourceX = (img.width - sourceW) / 2;
+            } else {
+                sourceW = img.width;
+                sourceH = img.width / targetRatio;
+                sourceY = (img.height - sourceH) / 2;
+            }
         }
       }
       
-      // Khắc phục số lẻ gây tràn viền của cropperjs
+      // Xử lý các cạnh không bị tràn viền
       if(sourceX < 0) sourceX = 0;
       if(sourceY < 0) sourceY = 0;
       if(sourceX + sourceW > img.width) sourceW = img.width - sourceX;
       if(sourceY + sourceH > img.height) sourceH = img.height - sourceY;
     }
 
-    const scaleFactor = parseFloat(document.getElementById('exportScale').value) || 1;
-    sharedCanvas.width = Math.max(1, Math.round(sourceW * scaleFactor));
-    sharedCanvas.height = Math.max(1, Math.round(sourceH * scaleFactor));
+    let actualScaleFactor = parseFloat(document.getElementById('exportScale').value) || 1;
+    
+    // ÉP KÍCH THƯỚC TOÀN CỤC KHI XUẤT ẢNH
+    if (hasGlobalTarget) {
+      sharedCanvas.width = globalW;
+      sharedCanvas.height = globalH;
+      actualScaleFactor = globalW / sourceW;
+    } else {
+      sharedCanvas.width = Math.max(1, Math.round(sourceW * actualScaleFactor));
+      sharedCanvas.height = Math.max(1, Math.round(sourceH * actualScaleFactor));
+    }
     
     if (formatInfo.mime === 'image/jpeg') {
       sharedCtx.fillStyle = '#ffffff'; 
@@ -1287,7 +1245,7 @@
     }
     
     sharedCtx.drawImage(img, sourceX, sourceY, sourceW, sourceH, 0, 0, sharedCanvas.width, sharedCanvas.height);
-    drawWatermarkContent(sharedCtx, sharedCanvas.width, sharedCanvas.height, scaleFactor, false);
+    drawWatermarkContent(sharedCtx, sharedCanvas.width, sharedCanvas.height, actualScaleFactor, false);
     
     const limitEnabled = document.getElementById('enableSizeLimit').checked;
     const targetBytes = (parseInt(document.getElementById('targetSizeKB').value) || 500) * 1024;
@@ -1306,7 +1264,6 @@
       finalBlob = await new Promise(resolve => sharedCanvas.toBlob(resolve, formatInfo.mime, formatInfo.quality));
     }
     
-    // Thu hồi bộ nhớ RAM của bức ảnh gốc ngay sau khi xử lý xong
     URL.revokeObjectURL(url);
     return finalBlob;
   }
@@ -1335,9 +1292,8 @@
       link.href = URL.createObjectURL(blob); link.click();
       setTimeout(() => URL.revokeObjectURL(link.href), 5000);
     } catch (err) { showToast('Có lỗi khi xử lý ảnh: ' + item.name, 'error'); console.error(err); }
-    hideProgress(); // luôn ẩn thanh tiến trình dù thành công hay lỗi (trước đây lỗi thì thanh bị kẹt lại trên màn hình)
+    hideProgress(); 
     
-    // Clear canvas reference to free up memory
     sharedCanvas.width = 0; sharedCanvas.height = 0;
     downloadBtn.disabled = false;
   });
@@ -1355,10 +1311,9 @@
     const zip = new JSZip();
     const formatInfo = getFormatInfo();
     const usedNames = new Set();
-    const failed = []; // gom tên ảnh lỗi để báo cho người dùng biết chính xác ảnh nào bị thiếu trong file zip
+    const failed = []; 
     let done = 0;
     
-    // TẠO 1 CANVAS DUY NHẤT CHO TẤT CẢ HÌNH ẢNH
     const sharedCanvas = document.createElement('canvas'); 
     const sharedCtx = sharedCanvas.getContext('2d');
     
@@ -1372,11 +1327,9 @@
       } catch (err) { failed.push(item.name); console.error('Lỗi ảnh:', item.name, err); }
       
       done++; setProgress(done, total, `Đang xử lý ${done}/${total}...`);
-      // Thêm 1 khoảng nghỉ 10ms nhỏ bé để CPU và RAM kịp dọn dẹp rác, UI tiến trình ko bị đơ
       await new Promise(r => setTimeout(r, 10)); 
     }
 
-    // Nếu TẤT CẢ ảnh đều lỗi thì dừng lại, không tải về 1 file zip rỗng
     if (usedNames.size === 0) {
       hideProgress();
       sharedCanvas.width = 0; sharedCanvas.height = 0;
@@ -1390,7 +1343,6 @@
     const link = document.createElement('a'); link.download = 'isc-watermarked-images.zip'; link.href = URL.createObjectURL(blob); link.click();
     setTimeout(() => URL.revokeObjectURL(link.href), 5000);
     
-    // Giải phóng bộ nhớ hoàn toàn
     sharedCanvas.width = 0; sharedCanvas.height = 0;
     hideProgress(); updateDownloadAllState(); downloadBtn.disabled = images.length === 0;
 
