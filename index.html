@@ -14,28 +14,41 @@
   <style>
     :root { 
       --bg: #f5f5f7; 
-      --panel: rgba(255, 255, 255, 0.75); 
-      --primary: #007aff; 
-      --primary-hover: #0056b3;
+      --panel: rgba(255, 255, 255, 0.62); 
+      --primary: #0a84ff; 
+      --primary-hover: #0060df;
       --border: rgba(0, 0, 0, 0.1); 
       --text: #1d1d1f;
       --text-muted: #86868b;
       --radius: 12px;
-      --blur: 20px;
+      --blur: 28px;
     }
     * { box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif; margin: 0; background: var(--bg); display: flex; height: 100vh; overflow: hidden; color: var(--text); -webkit-font-smoothing: antialiased; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif; margin: 0; 
+      display: flex; height: 100vh; overflow: hidden; color: var(--text); -webkit-font-smoothing: antialiased;
+      /* Nền gradient nhiều lớp màu xanh - để các mảng kính mờ (backdrop-filter) phía trên thực sự
+         hiện rõ hiệu ứng "liquid glass" thay vì chỉ blur lên 1 màu xám phẳng vô nghĩa. */
+      background:
+        radial-gradient(circle at 8% 12%, rgba(0, 198, 255, 0.35), transparent 42%),
+        radial-gradient(circle at 92% 8%, rgba(88, 86, 214, 0.28), transparent 45%),
+        radial-gradient(circle at 50% 100%, rgba(0, 122, 255, 0.25), transparent 50%),
+        radial-gradient(circle at 85% 80%, rgba(0, 198, 255, 0.18), transparent 40%),
+        linear-gradient(160deg, #eaf3ff 0%, #f5f5f7 55%, #eef6ff 100%);
+      background-attachment: fixed;
+      gap: 14px; padding: 14px;
+    }
 
     ::-webkit-scrollbar { width: 8px; height: 8px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 10px; }
     ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.3); }
 
-    .glass-panel { background: var(--panel); backdrop-filter: blur(var(--blur)); -webkit-backdrop-filter: blur(var(--blur)); border: 1px solid rgba(255, 255, 255, 0.4); box-shadow: 0 4px 20px rgba(0,0,0,0.03); }
+    .glass-panel { background: var(--panel); backdrop-filter: blur(var(--blur)) saturate(180%); -webkit-backdrop-filter: blur(var(--blur)) saturate(180%); border: 1px solid rgba(255, 255, 255, 0.55); box-shadow: 0 8px 32px rgba(10,80,200,0.10), inset 0 1px 0 rgba(255,255,255,0.5); border-radius: 22px; }
 
-    .sidebar-left { width: clamp(210px, 20vw, 280px); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 20px; z-index: 10;}
-    .main-area { flex: 1; display: flex; flex-direction: column; background: #e5e5ea; min-width: 260px; position: relative; }
-    .sidebar-right { width: clamp(250px, 24vw, 340px); border-left: 1px solid var(--border); padding: 20px; overflow-y: auto; z-index: 10; display: flex; flex-direction: column; }
+    .sidebar-left { width: clamp(210px, 20vw, 280px); display: flex; flex-direction: column; padding: 20px; z-index: 10; overflow: hidden;}
+    .main-area { flex: 1; display: flex; flex-direction: column; min-width: 260px; position: relative; overflow: hidden; }
+    .sidebar-right { width: clamp(250px, 24vw, 340px); padding: 20px; overflow-y: auto; z-index: 10; display: flex; flex-direction: column; }
 
     @media (max-width: 980px) {
       .sidebar-left { width: 190px; padding: 14px; }
@@ -46,13 +59,13 @@
     @media (max-width: 700px) {
       body { flex-direction: column; height: auto; min-height: 100vh; overflow-y: auto; }
       .sidebar-left, .sidebar-right, .main-area { width: 100%; min-width: 0; }
-      .sidebar-left { border-right: none; border-bottom: 1px solid var(--border); order: 2; }
+      .sidebar-left { order: 2; }
       .main-area { order: 1; min-height: 55vh; }
-      .sidebar-right { border-left: none; border-top: 1px solid var(--border); order: 3; max-height: 60vh; }
+      .sidebar-right { order: 3; max-height: 60vh; }
       .thumb-list { max-height: 220px; }
       #previewImg { max-height: 45vh; }
     }
-    .topbar { min-height: 60px; border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 10px 20px; justify-content: space-between; gap: 10px; flex-wrap: wrap; z-index: 10; }
+    .topbar { min-height: 60px; border-bottom: 1px solid rgba(0,0,0,0.06); display: flex; align-items: center; padding: 10px 20px; justify-content: space-between; gap: 10px; flex-wrap: wrap; z-index: 10; }
     
     .btn { background: var(--primary); color: white; border: none; padding: 10px 18px; border-radius: 20px; font-weight: 600; cursor: pointer; font-size: 13px; transition: all 0.2s ease; box-shadow: 0 2px 5px rgba(0,122,255,0.3); display: inline-flex; align-items: center; gap: 6px; justify-content: center;}
     .btn:hover:not(:disabled) { background: var(--primary-hover); transform: translateY(-1px); box-shadow: 0 4px 8px rgba(0,122,255,0.4); }
@@ -220,8 +233,8 @@
   </div>
 
   <!-- MAIN AREA -->
-  <div class="main-area">
-    <div class="topbar glass-panel">
+  <div class="main-area glass-panel">
+    <div class="topbar">
       <div class="flex-row">
         <span style="font-weight: 600; font-size: 14px; min-width: 150px;" id="statusText">Chưa chọn ảnh</span>
         
@@ -301,7 +314,14 @@
             <input type="number" id="cropHNum" placeholder="VD: 630">
           </div>
         </div>
-        <button class="btn secondary" id="applyCropBtn" style="width:100%; padding: 6px; font-size:12px;">Áp dụng cho TẤT CẢ ảnh</button>
+        <div class="grid-2">
+          <button class="btn secondary" id="applyCropCurrentBtn" style="padding: 6px; font-size:12px;">Áp dụng ảnh này</button>
+          <button class="btn" id="applyCropAllBtn" style="padding: 6px; font-size:12px;">Áp dụng TẤT CẢ</button>
+        </div>
+        <div id="globalTargetChip" style="display:none; margin-top:10px; padding:8px 10px; background:rgba(0,122,255,0.08); border:1px solid rgba(0,122,255,0.25); border-radius:10px; font-size:11px; align-items:center; justify-content:space-between; gap:8px;">
+          <span id="globalTargetChipText">Đang áp dụng cho tất cả ảnh</span>
+          <button id="clearGlobalTargetBtn" style="background:none;border:none;color:var(--primary);font-weight:700;cursor:pointer;font-size:11px; flex:none;">Hủy</button>
+        </div>
       </div>
 
       <hr style="border:0; border-top:1px dashed rgba(0,0,0,0.1); margin: 15px 0;">
@@ -628,6 +648,10 @@
   let cropper = null;
   let currentImgUrl = null; 
   let cropperUpdating = false;
+  // "Mục tiêu xuất chung": khi khác null, TẤT CẢ ảnh (kể cả ảnh chưa từng mở) sẽ bị ép xuất ra
+  // đúng kích thước width x height này. Chỉ được bật rõ ràng qua nút "Áp dụng cho TẤT CẢ",
+  // để tránh nhầm lẫn với việc chỉ áp dụng cho 1 ảnh đang xem.
+  let globalCropTarget = null; // { width, height } hoặc null
 
   const previewImg = document.getElementById('previewImg');
   const imgWrapper = document.getElementById('imgWrapper');
@@ -971,17 +995,13 @@
   function initCropper() {
     if(cropper) cropper.destroy();
     
-    const globalW = parseFloat(document.getElementById('cropWNum').value);
-    const globalH = parseFloat(document.getElementById('cropHNum').value);
+    // Ưu tiên tỉ lệ từ "mục tiêu xuất chung" (nếu đã bấm Áp dụng cho TẤT CẢ), sau đó mới tới dropdown tỉ lệ
     let aspectRatio = NaN;
-    
-    // Nếu User đã nhập số cụ thể, ưu tiên khóa tỷ lệ đó cho toàn cục
-    if (globalW > 0 && globalH > 0) {
-        aspectRatio = globalW / globalH;
+    if (globalCropTarget) {
+      aspectRatio = globalCropTarget.width / globalCropTarget.height;
     } else {
-        // Nếu không, quay về tỷ lệ của dropdown
-        let ratio = document.getElementById('cropRatio').value;
-        aspectRatio = ratio === 'free' ? NaN : parseFloat(ratio);
+      let ratio = document.getElementById('cropRatio').value;
+      aspectRatio = ratio === 'free' ? NaN : parseFloat(ratio);
     }
     
     const savedDataForRestore = images[currentIndex] && images[currentIndex].cropData;
@@ -1002,6 +1022,19 @@
              if(images[currentIndex]) images[currentIndex].cropData = cropper.getData();
              syncOverlayWithCropper();
            });
+        } else if (globalCropTarget) {
+           // Ảnh này CHƯA từng được chỉnh crop riêng, nhưng đang có "mục tiêu chung" đang bật.
+           // Phóng to khung cắt kín khung nhìn (giống hệt lúc bấm "Áp dụng") thay vì để autoCropArea
+           // tự tính - vì autoCropArea với tỉ lệ lệch nhiều so với ảnh gốc hay ra khung rất nhỏ.
+           requestAnimationFrame(() => {
+             if(!cropper) return;
+             const containerData = cropper.getContainerData();
+             cropperUpdating = true;
+             cropper.setCropBoxData({ left: 0, top: 0, width: containerData.width, height: containerData.height });
+             cropperUpdating = false;
+             if(images[currentIndex]) images[currentIndex].cropData = cropper.getData();
+             syncOverlayWithCropper();
+           });
         }
         syncOverlayWithCropper();
       },
@@ -1017,39 +1050,70 @@
   }
 
   document.getElementById('cropRatio').addEventListener('change', (e) => {
-    // Nếu đổi tỷ lệ ở thẻ Select, xóa đi số người dùng đã nhập để về dạng Free
+    // Đổi tỷ lệ ở dropdown = từ bỏ mục tiêu xuất chung theo số đã nhập, quay về chế độ theo tỉ lệ preset
     document.getElementById('cropWNum').value = '';
     document.getElementById('cropHNum').value = '';
+    clearGlobalCropTarget();
     if(!cropper) return;
     let val = e.target.value;
     cropper.setAspectRatio(val === 'free' ? NaN : parseFloat(val));
     saveHistory();
   });
 
-  document.getElementById('applyCropBtn').addEventListener('click', () => {
+  function maximizeCropBox() {
+    const containerData = cropper.getContainerData();
+    cropper.setCropBoxData({ left: 0, top: 0, width: containerData.width, height: containerData.height });
+  }
+
+  // Áp dụng kích thước W x H (dạng tỉ lệ, phóng to khung tối đa) CHỈ cho ảnh đang xem
+  document.getElementById('applyCropCurrentBtn').addEventListener('click', () => {
     if(!cropper) return;
     const w = parseFloat(document.getElementById('cropWNum').value);
     const h = parseFloat(document.getElementById('cropHNum').value);
-    if(w > 0 && h > 0) {
-      // 1. Khóa tỷ lệ (Aspect Ratio)
+    if(!(w > 0 && h > 0)) { showToast('Vui lòng nhập đủ Rộng và Cao trước khi áp dụng.', 'warning', 3500); return; }
+    cropper.setAspectRatio(w / h);
+    maximizeCropBox();
+    if(images[currentIndex]) images[currentIndex].cropData = cropper.getData();
+    syncOverlayWithCropper();
+    saveHistory();
+    showToast(`Đã áp dụng tỉ lệ ${w}×${h} cho riêng ảnh này.`, 'success', 3500);
+  });
+
+  // Áp dụng kích thước W x H cho TẤT CẢ ảnh: bật "mục tiêu xuất chung" - áp dụng ngay cho ảnh đang
+  // xem, và mọi ảnh khác (kể cả ảnh chưa từng mở) khi xuất file đều bị ép về đúng kích thước này.
+  document.getElementById('applyCropAllBtn').addEventListener('click', () => {
+    const w = parseFloat(document.getElementById('cropWNum').value);
+    const h = parseFloat(document.getElementById('cropHNum').value);
+    if(!(w > 0 && h > 0)) { showToast('Vui lòng nhập đủ Rộng và Cao trước khi áp dụng.', 'warning', 3500); return; }
+    globalCropTarget = { width: w, height: h };
+    updateGlobalTargetChip();
+    if (cropper) {
       cropper.setAspectRatio(w / h);
-      
-      // 2. Tự động phóng to khung cắt ra tối đa phủ kín ảnh
-      const containerData = cropper.getContainerData();
-      cropper.setCropBoxData({
-        left: 0,
-        top: 0,
-        width: containerData.width,
-        height: containerData.height
-      });
-      
-      if(images[currentIndex]) {
-        images[currentIndex].cropData = cropper.getData();
-      }
+      maximizeCropBox();
+      if(images[currentIndex]) images[currentIndex].cropData = cropper.getData();
       syncOverlayWithCropper();
-      saveHistory();
-      showToast(`Đã khóa kích thước ${w}x${h}px cho TẤT CẢ ảnh. Khung cắt đã được tự động phóng to.`, 'success', 4000);
     }
+    saveHistory();
+    showToast(`Đã áp dụng kích thước xuất ${w}×${h}px cho TẤT CẢ ${images.length} ảnh.`, 'success', 4500);
+  });
+
+  function clearGlobalCropTarget() {
+    globalCropTarget = null;
+    updateGlobalTargetChip();
+  }
+  function updateGlobalTargetChip() {
+    const chip = document.getElementById('globalTargetChip');
+    if (globalCropTarget) {
+      chip.style.display = 'flex';
+      document.getElementById('globalTargetChipText').textContent = `Đang áp dụng ${globalCropTarget.width}×${globalCropTarget.height} cho tất cả ảnh`;
+    } else {
+      chip.style.display = 'none';
+    }
+  }
+  document.getElementById('clearGlobalTargetBtn').addEventListener('click', () => {
+    clearGlobalCropTarget();
+    showToast('Đã hủy áp dụng kích thước chung. Mỗi ảnh sẽ xuất theo cài đặt riêng.', 'success', 3500);
+    saveHistory();
   });
 
   async function loadCurrentImage() {
@@ -1183,10 +1247,11 @@
     
     let sourceX = 0, sourceY = 0, sourceW = img.width, sourceH = img.height;
     
-    // Lấy thông số Global Export nếu người dùng có gõ vào ô
-    const globalW = parseFloat(document.getElementById('cropWNum').value);
-    const globalH = parseFloat(document.getElementById('cropHNum').value);
-    const hasGlobalTarget = globalW > 0 && globalH > 0;
+    // "Mục tiêu xuất chung" (đã bấm Áp dụng cho TẤT CẢ) - dùng biến trạng thái rõ ràng thay vì
+    // suy đoán qua nội dung 2 ô nhập liệu, để hành vi luôn nhất quán và dễ kiểm chứng.
+    const hasGlobalTarget = !!globalCropTarget;
+    const targetW = hasGlobalTarget ? globalCropTarget.width : null;
+    const targetH = hasGlobalTarget ? globalCropTarget.height : null;
     
     if(document.getElementById('enableCrop').checked) {
       if (item.cropData) {
@@ -1198,7 +1263,7 @@
         // Tự động tính vùng crop chính giữa ảnh nếu chưa được thao tác
         let targetRatio = null;
         if (hasGlobalTarget) {
-            targetRatio = globalW / globalH;
+            targetRatio = targetW / targetH;
         } else {
             const ratio = document.getElementById('cropRatio').value;
             if (ratio !== 'free') targetRatio = parseFloat(ratio);
@@ -1227,11 +1292,11 @@
 
     let actualScaleFactor = parseFloat(document.getElementById('exportScale').value) || 1;
     
-    // ÉP KÍCH THƯỚC TOÀN CỤC KHI XUẤT ẢNH
+    // ÉP KÍCH THƯỚC TOÀN CỤC KHI XUẤT ẢNH (áp dụng cho MỌI ảnh, kể cả ảnh chưa từng mở xem qua)
     if (hasGlobalTarget) {
-      sharedCanvas.width = globalW;
-      sharedCanvas.height = globalH;
-      actualScaleFactor = globalW / sourceW;
+      sharedCanvas.width = targetW;
+      sharedCanvas.height = targetH;
+      actualScaleFactor = targetW / sourceW;
     } else {
       sharedCanvas.width = Math.max(1, Math.round(sourceW * actualScaleFactor));
       sharedCanvas.height = Math.max(1, Math.round(sourceH * actualScaleFactor));
