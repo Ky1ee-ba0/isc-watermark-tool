@@ -202,6 +202,10 @@
     .modal-box textarea:focus, .modal-box input:focus { border-color: var(--primary); }
     .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
     .modal-email-hint { font-size: 11px; color: var(--text-muted); margin-top: 8px; text-align: center; }
+
+    /* Khung ảnh: canvas xem trước ghép khung + ảnh */
+    #frameCanvas { display: none; width: auto; height: auto; max-width: 100%; max-height: 72vh; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.12); cursor: grab; touch-action: none; background: repeating-conic-gradient(#e6ecf5 0% 25%, #ffffff 0% 50%) 50% / 20px 20px; }
+    .frame-info { font-size: 11px; color: var(--text-muted); margin: 0 0 12px; line-height: 1.5; }
   </style>
 </head>
 <body>
@@ -244,7 +248,7 @@
     <div class="footer-brand">
       <div class="brand-name">Phát triển bởi Bảo Kỳ</div>
       <div class="brand-desc">Lưu hành nội bộ ISC</div>
-      <div class="version-badge">Bản Chính Thức v1.1.9</div>
+      <div class="version-badge">Bản Chính Thức v1.2.0</div>
     </div>
   </div>
 
@@ -291,6 +295,7 @@
         <img id="previewImg" src="" alt="Preview">
         <canvas id="wmOverlay"></canvas>
       </div>
+      <canvas id="frameCanvas"></canvas>
     </div>
   </div>
 
@@ -363,6 +368,41 @@
           <input type="number" id="targetSizeKB" value="500" min="50" max="10000" style="flex:1;">
           <span style="font-size: 12px; font-weight: 600; color: var(--text-muted);">KB / Ảnh</span>
         </div>
+      </div>
+    </div>
+
+    <!-- FRAME -->
+    <div class="control-section">
+      <div class="section-title">
+        <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0056b3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><rect x="8" y="8" width="8" height="8" rx="1"/></svg>Khung ảnh</span>
+        <label class="toggle-container">
+          <input type="checkbox" id="enableFrame">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div id="frameControls" style="opacity: 0.4; pointer-events: none;">
+        <div class="control-group flex-row">
+          <input type="file" id="uploadFrame" accept="image/png,image/webp" style="display: none;">
+          <button class="btn secondary" onclick="document.getElementById('uploadFrame').click()" style="flex: 1; padding: 8px;">Tải khung PNG</button>
+          <button class="btn danger" id="clearFrameBtn" style="padding: 8px;" title="Xóa khung" disabled>Xóa</button>
+        </div>
+        <div class="frame-info" id="frameInfo">Chưa có khung. Dùng file PNG có 1 ô ảnh trong suốt (alpha = 0), ảnh sẽ được đặt vào ô đó.</div>
+        <div class="control-group">
+          <label>Cách đặt ảnh vào ô</label>
+          <select id="frameFit">
+            <option value="cover" selected>Lấp đầy ô (có thể cắt viền ảnh)</option>
+            <option value="contain">Giữ trọn ảnh (có thể có khoảng trống)</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label>Phóng to ảnh trong khung (ảnh đang xem)</label>
+          <div class="range-input-combo">
+            <input type="range" id="frameZoomRange" min="100" max="400" step="5" value="100">
+            <span id="frameZoomLabel" style="width: 48px; text-align: right; font-size: 12px; font-weight: 600;">100%</span>
+          </div>
+        </div>
+        <button class="btn secondary" id="frameResetBtn" style="width: 100%; padding: 6px; font-size: 12px;">Căn giữa lại ảnh này</button>
+        <div class="frame-info" style="margin: 10px 0 0;">Kéo chuột trên ảnh để dịch vị trí, lăn chuột để phóng to / thu nhỏ.</div>
       </div>
     </div>
 
@@ -540,6 +580,8 @@
       wmColor: document.getElementById('wmColor').value,
       wmOpacity: document.getElementById('wmOpacityRange').value,
       enableLogo: document.getElementById('enableLogo').checked,
+      enableFrame: document.getElementById('enableFrame').checked,
+      frameFit: document.getElementById('frameFit').value,
       logoPosition: currentLogoPos,
       logoOffsetX: document.getElementById('logoOffsetXRange').value,
       logoOffsetY: document.getElementById('logoOffsetYRange').value,
@@ -572,6 +614,8 @@
     document.getElementById('wmOpacityNum').value = Math.round(state.wmOpacity * 100);
     
     document.getElementById('enableLogo').checked = state.enableLogo;
+    document.getElementById('enableFrame').checked = !!state.enableFrame;
+    document.getElementById('frameFit').value = state.frameFit || 'cover';
     document.getElementById('logoOffsetXRange').value = state.logoOffsetX || 0;
     document.getElementById('logoOffsetXNum').value = state.logoOffsetX || 0;
     document.getElementById('logoOffsetYRange').value = state.logoOffsetY || 0;
@@ -585,6 +629,7 @@
 
     toggleSections();
     updateWmDensityVisibility();
+    onFrameModeChanged();
     handleCropToggle(); 
     scheduleOverlayRender();
     
@@ -680,7 +725,9 @@
 
   let images = [];       
   let currentIndex = -1;
-  let logoImg = null;    
+  let logoImg = null;
+  let frameImg = null;   // ảnh khung PNG
+  let frameWin = null;   // ô ảnh trong suốt của khung {x,y,w,h} theo toạ độ gốc của khung    
   let imageIdCounter = 0;
   let cropper = null;
   let currentImgUrl = null; 
@@ -997,6 +1044,9 @@
     document.getElementById('logoControls').style.pointerEvents = logoOn ? 'auto' : 'none';
     document.getElementById('sizeLimitWrap').style.opacity = limitOn ? '1' : '0.4';
     document.getElementById('sizeLimitWrap').style.pointerEvents = limitOn ? 'auto' : 'none';
+    const frameOn = document.getElementById('enableFrame').checked;
+    document.getElementById('frameControls').style.opacity = frameOn ? '1' : '0.4';
+    document.getElementById('frameControls').style.pointerEvents = frameOn ? 'auto' : 'none';
   }
 
   document.getElementById('enableText').addEventListener('change', () => { toggleSections(); saveHistory(); scheduleOverlayRender(); });
@@ -1056,7 +1106,14 @@
       syncOverlayWithImage(); 
     }
   }
-  document.getElementById('enableCrop').addEventListener('change', () => { saveHistory(); handleCropToggle(); });
+  document.getElementById('enableCrop').addEventListener('change', () => {
+    if (document.getElementById('enableCrop').checked && frameModeActive()) {
+      document.getElementById('enableFrame').checked = false;
+      onFrameModeChanged();
+      showToast('Đã tắt Khung ảnh vì bạn bật chế độ Cắt (2 chế độ này không dùng chung).', 'success', 4500);
+    }
+    saveHistory(); handleCropToggle();
+  });
 
   function initCropper() {
     if(cropper) cropper.destroy();
@@ -1176,29 +1233,271 @@
 
   async function loadCurrentImage() {
     if (currentIndex === -1 || !images[currentIndex]) { 
-      imgWrapper.style.display = 'none'; 
+      updatePreviewMode();
       if(cropper) { cropper.destroy(); cropper = null; }
       if(currentImgUrl) { URL.revokeObjectURL(currentImgUrl); currentImgUrl = null; }
       return; 
     }
     
-    imgWrapper.style.display = 'inline-block';
     const item = images[currentIndex];
+    updatePreviewMode();
     
     if(currentImgUrl) URL.revokeObjectURL(currentImgUrl);
     currentImgUrl = URL.createObjectURL(item.file);
     
     if(cropper) { cropper.destroy(); cropper = null; }
+    syncFrameZoomUI();
     
     previewImg.onload = () => {
-      if (document.getElementById('enableCrop').checked) {
+      if (frameModeActive()) {
+        renderFramePreview();
+      } else if (document.getElementById('enableCrop').checked) {
         initCropper();
       } else {
         syncOverlayWithImage();
       }
     };
+    previewImg.dataset.itemId = item.id;
     previewImg.src = currentImgUrl;
   }
+
+  // =====================================================================
+  // KHUNG ẢNH: PNG có 1 ô trong suốt. Ảnh được đặt vào ô, khung phủ lên trên,
+  // chữ watermark nằm dưới khung, logo nằm trên khung. Xuất ra đúng kích thước khung.
+  // =====================================================================
+  const enableFrameEl = document.getElementById('enableFrame');
+  const frameFitEl = document.getElementById('frameFit');
+  const frameCanvas = document.getElementById('frameCanvas');
+  const frameCtx = frameCanvas.getContext('2d');
+  let lastFrameMode = false;
+
+  function frameModeActive() { return !!(enableFrameEl.checked && frameImg && frameWin); }
+
+  // Tìm ô trong suốt lớn nhất nằm TRỌN BÊN TRONG khung (không chạm mép ảnh). Nếu khung hở ra mép
+  // thì lấy vùng trong suốt lớn nhất. Trả về bbox theo toạ độ ảnh dò (hoặc null nếu không có).
+  function findTransparentWindow(data, pw, ph) {
+    const N = pw * ph;
+    const label = new Int32Array(N);
+    const stack = new Int32Array(N);
+    let bestEnclosed = null, bestAny = null, nextId = 0;
+    const isT = (i) => data[i * 4 + 3] < 16;
+    for (let i = 0; i < N; i++) {
+      if (label[i] !== 0 || !isT(i)) continue;
+      nextId++;
+      let sp = 0; stack[sp++] = i; label[i] = nextId;
+      let area = 0, minX = pw, minY = ph, maxX = -1, maxY = -1, touches = false;
+      while (sp > 0) {
+        const q = stack[--sp];
+        const x = q % pw, y = (q / pw) | 0;
+        area++;
+        if (x < minX) minX = x; if (x > maxX) maxX = x; if (y < minY) minY = y; if (y > maxY) maxY = y;
+        if (x === 0 || y === 0 || x === pw - 1 || y === ph - 1) touches = true;
+        if (x > 0)      { const n = q - 1;  if (label[n] === 0 && isT(n)) { label[n] = nextId; stack[sp++] = n; } }
+        if (x < pw - 1) { const n = q + 1;  if (label[n] === 0 && isT(n)) { label[n] = nextId; stack[sp++] = n; } }
+        if (y > 0)      { const n = q - pw; if (label[n] === 0 && isT(n)) { label[n] = nextId; stack[sp++] = n; } }
+        if (y < ph - 1) { const n = q + pw; if (label[n] === 0 && isT(n)) { label[n] = nextId; stack[sp++] = n; } }
+      }
+      const comp = { area, minX, minY, maxX, maxY };
+      if (!bestAny || area > bestAny.area) bestAny = comp;
+      if (!touches && (!bestEnclosed || area > bestEnclosed.area)) bestEnclosed = comp;
+    }
+    const pick = (bestEnclosed && bestEnclosed.area >= N * 0.02) ? bestEnclosed : bestAny;
+    if (!pick || pick.area < N * 0.02) return null;
+    return pick;
+  }
+
+  function detectFrameWindow(img) {
+    const W = img.naturalWidth, H = img.naturalHeight;
+    const k = Math.min(1, 1000 / Math.max(W, H));
+    const pw = Math.max(1, Math.round(W * k)), ph = Math.max(1, Math.round(H * k));
+    const c = document.createElement('canvas'); c.width = pw; c.height = ph;
+    const cx = c.getContext('2d', { willReadFrequently: true });
+    cx.drawImage(img, 0, 0, pw, ph);
+    const box = findTransparentWindow(cx.getImageData(0, 0, pw, ph).data, pw, ph);
+    if (!box) return null;
+    // nới ra 1 điểm ảnh dò để ảnh phủ kín mép ô (phần thừa nằm dưới khung nên không lộ)
+    const x = Math.max(0, Math.floor((box.minX - 1) / k)), y = Math.max(0, Math.floor((box.minY - 1) / k));
+    const x2 = Math.min(W, Math.ceil((box.maxX + 2) / k)), y2 = Math.min(H, Math.ceil((box.maxY + 2) / k));
+    return { x, y, w: x2 - x, h: y2 - y };
+  }
+
+  function getFrameAdj(item) { if (!item.frameAdj) item.frameAdj = { zoom: 1, ox: 0, oy: 0 }; return item.frameAdj; }
+
+  // Tính vị trí ảnh trong ô (toạ độ gốc của khung). ox/oy là độ dịch theo tỉ lệ kích thước ô.
+  function computeFramePlacement(imgW, imgH, adj, mode) {
+    const w = frameWin;
+    const s0 = mode === 'contain' ? Math.min(w.w / imgW, w.h / imgH) : Math.max(w.w / imgW, w.h / imgH);
+    const s = s0 * adj.zoom;
+    const dw = imgW * s, dh = imgH * s;
+    const mx = Math.max(0, (dw - w.w) / 2), my = Math.max(0, (dh - w.h) / 2);
+    const px = Math.max(-mx, Math.min(mx, adj.ox * w.w)), py = Math.max(-my, Math.min(my, adj.oy * w.h));
+    return { dx: w.x + (w.w - dw) / 2 + px, dy: w.y + (w.h - dh) / 2 + py, dw, dh, mx, my };
+  }
+
+  function clampFrameAdj(item) {
+    const adj = getFrameAdj(item);
+    adj.zoom = Math.max(1, Math.min(4, adj.zoom));
+    const p = computeFramePlacement(item.width, item.height, adj, frameFitEl.value);
+    adj.ox = p.mx > 0 ? Math.max(-p.mx, Math.min(p.mx, adj.ox * frameWin.w)) / frameWin.w : 0;
+    adj.oy = p.my > 0 ? Math.max(-p.my, Math.min(p.my, adj.oy * frameWin.h)) / frameWin.h : 0;
+  }
+
+  // Dùng chung cho xem trước và xuất file -> kết quả luôn giống nhau
+  function drawFramedComposite(tctx, W, H, srcImg, item, jpeg) {
+    const k = W / frameImg.naturalWidth;
+    const iw = srcImg.naturalWidth || srcImg.width, ih = srcImg.naturalHeight || srcImg.height;
+    const p = computeFramePlacement(iw, ih, getFrameAdj(item), frameFitEl.value);
+    tctx.clearRect(0, 0, W, H);
+    if (jpeg) { tctx.fillStyle = '#ffffff'; tctx.fillRect(0, 0, W, H); }
+    tctx.save();
+    tctx.beginPath(); tctx.rect(frameWin.x * k, frameWin.y * k, frameWin.w * k, frameWin.h * k); tctx.clip();
+    tctx.drawImage(srcImg, p.dx * k, p.dy * k, p.dw * k, p.dh * k);
+    tctx.restore();
+    drawWatermarkContent(tctx, W, H, k, false, () => { tctx.drawImage(frameImg, 0, 0, W, H); });
+  }
+
+  function renderFramePreview() {
+    if (!frameModeActive()) return;
+    const item = images[currentIndex];
+    if (!item || !previewImg.complete || !previewImg.naturalWidth) return;
+    if (String(item.id) !== previewImg.dataset.itemId) return; // ảnh xem trước chưa kịp đổi sang ảnh mới
+    const fw = frameImg.naturalWidth, fh = frameImg.naturalHeight;
+    const ps = Math.min(1, 1400 / Math.max(fw, fh));
+    const W = Math.round(fw * ps), H = Math.round(fh * ps);
+    if (frameCanvas.width !== W) frameCanvas.width = W;
+    if (frameCanvas.height !== H) frameCanvas.height = H;
+    drawFramedComposite(frameCtx, W, H, previewImg, item, document.getElementById('exportFormat').value === 'jpeg');
+  }
+
+  function updatePreviewMode() {
+    const hasImg = currentIndex !== -1 && !!images[currentIndex];
+    const frameOn = frameModeActive();
+    imgWrapper.style.display = (hasImg && !frameOn) ? 'inline-block' : 'none';
+    frameCanvas.style.display = (hasImg && frameOn) ? 'block' : 'none';
+  }
+
+  function syncFrameZoomUI() {
+    const item = images[currentIndex];
+    const z = item ? Math.round(getFrameAdj(item).zoom * 100) : 100;
+    document.getElementById('frameZoomRange').value = z;
+    document.getElementById('frameZoomLabel').textContent = z + '%';
+  }
+
+  function updateFrameInfo() {
+    document.getElementById('frameInfo').textContent = frameImg
+      ? `Khung ${frameImg.naturalWidth}×${frameImg.naturalHeight}px · Ô ảnh ${frameWin.w}×${frameWin.h}px (tự nhận diện)`
+      : 'Chưa có khung. Dùng file PNG có 1 ô ảnh trong suốt (alpha = 0), ảnh sẽ được đặt vào ô đó.';
+    document.getElementById('clearFrameBtn').disabled = !frameImg;
+  }
+
+  function onFrameModeChanged(force) {
+    const on = frameModeActive();
+    if (on && document.getElementById('enableCrop').checked) {
+      document.getElementById('enableCrop').checked = false;
+      handleCropToggle();
+      showToast('Đã tắt chế độ Cắt vì đang dùng Khung ảnh (ảnh được đặt vừa vào ô của khung).', 'success', 4500);
+    }
+    toggleSections();
+    if (on !== lastFrameMode || force) {
+      lastFrameMode = on;
+      if (cropper) { cropper.destroy(); cropper = null; }
+      loadCurrentImage();
+    } else {
+      scheduleOverlayRender();
+    }
+    syncFrameZoomUI();
+  }
+
+  document.getElementById('uploadFrame').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    decodeToImage(file).then(({ img }) => {
+      const win = detectFrameWindow(img);
+      if (!win) {
+        showToast('Không tìm thấy ô ảnh trong suốt trong khung này. Cần PNG có vùng trống thật (alpha = 0), không phải ô màu trắng.', 'error', 9000);
+        return;
+      }
+      frameImg = img; frameWin = win;
+      enableFrameEl.checked = true;
+      updateFrameInfo();
+      onFrameModeChanged(true);
+      saveHistory();
+    }).catch(() => showToast('Không đọc được file khung.', 'error'))
+      .finally(() => { e.target.value = ''; });
+  });
+
+  document.getElementById('clearFrameBtn').addEventListener('click', () => {
+    frameImg = null; frameWin = null;
+    enableFrameEl.checked = false;
+    updateFrameInfo();
+    onFrameModeChanged(true);
+    saveHistory();
+  });
+
+  enableFrameEl.addEventListener('change', () => {
+    if (enableFrameEl.checked && !frameImg) showToast('Hãy bấm "Tải khung PNG" để chọn khung trước.', 'warning', 3500);
+    onFrameModeChanged();
+    saveHistory();
+  });
+
+  frameFitEl.addEventListener('change', () => {
+    const item = images[currentIndex];
+    if (item && frameModeActive()) clampFrameAdj(item);
+    scheduleOverlayRender();
+    saveHistory();
+  });
+
+  document.getElementById('frameZoomRange').addEventListener('input', (e) => {
+    const item = images[currentIndex];
+    if (!item || !frameModeActive()) return;
+    getFrameAdj(item).zoom = parseInt(e.target.value) / 100;
+    clampFrameAdj(item);
+    document.getElementById('frameZoomLabel').textContent = e.target.value + '%';
+    scheduleOverlayRender();
+  });
+
+  document.getElementById('frameResetBtn').addEventListener('click', () => {
+    const item = images[currentIndex];
+    if (!item) return;
+    item.frameAdj = { zoom: 1, ox: 0, oy: 0 };
+    syncFrameZoomUI();
+    scheduleOverlayRender();
+  });
+
+  // Kéo chuột để dịch ảnh trong khung, lăn chuột để phóng to / thu nhỏ
+  let frameDrag = null;
+  frameCanvas.addEventListener('pointerdown', (e) => {
+    if (!frameModeActive() || !images[currentIndex]) return;
+    frameCanvas.setPointerCapture(e.pointerId);
+    frameDrag = { x: e.clientX, y: e.clientY };
+    frameCanvas.style.cursor = 'grabbing';
+  });
+  frameCanvas.addEventListener('pointermove', (e) => {
+    if (!frameDrag) return;
+    const item = images[currentIndex];
+    if (!item) return;
+    const rect = frameCanvas.getBoundingClientRect();
+    const dx = (e.clientX - frameDrag.x) * (frameImg.naturalWidth / rect.width);
+    const dy = (e.clientY - frameDrag.y) * (frameImg.naturalHeight / rect.height);
+    frameDrag.x = e.clientX; frameDrag.y = e.clientY;
+    const adj = getFrameAdj(item);
+    adj.ox += dx / frameWin.w; adj.oy += dy / frameWin.h;
+    clampFrameAdj(item);
+    scheduleOverlayRender();
+  });
+  const endFrameDrag = () => { frameDrag = null; frameCanvas.style.cursor = 'grab'; };
+  frameCanvas.addEventListener('pointerup', endFrameDrag);
+  frameCanvas.addEventListener('pointercancel', endFrameDrag);
+  frameCanvas.addEventListener('wheel', (e) => {
+    const item = images[currentIndex];
+    if (!item || !frameModeActive()) return;
+    e.preventDefault();
+    const adj = getFrameAdj(item);
+    adj.zoom *= (e.deltaY < 0 ? 1.08 : 1 / 1.08);
+    clampFrameAdj(item);
+    syncFrameZoomUI();
+    scheduleOverlayRender();
+  }, { passive: false });
 
   function buildGridTile(text, size, color, opacity, gap) {
     const tile = document.createElement('canvas'); tile.width = gap; tile.height = gap; const tctx = tile.getContext('2d');
@@ -1206,7 +1505,7 @@
     tctx.translate(gap / 2, gap / 2); tctx.rotate(-30 * Math.PI / 180); tctx.fillText(text, 0, 0); return tile;
   }
 
-  function drawWatermarkContent(targetCtx, width, height, scale = 1, shouldClear = true) {
+  function drawWatermarkContent(targetCtx, width, height, scale = 1, shouldClear = true, betweenLayers = null) {
     if (shouldClear) targetCtx.clearRect(0, 0, width, height);
 
     if (el.enableText.checked) {
@@ -1237,6 +1536,9 @@
         }
       }
     }
+
+    // Khung ảnh nằm GIỮA: chữ watermark nằm dưới khung, logo nằm trên khung
+    if (betweenLayers) betweenLayers();
 
     if (el.enableLogo.checked && logoImg) {
       const lWidth = Math.max(1, Math.round(width * ((parseFloat(el.logoWidthRange.value) || 30) / 100)));
@@ -1299,6 +1601,7 @@
       renderQueued = true; 
       requestAnimationFrame(() => { 
         renderQueued = false; 
+        if (frameModeActive()) { renderFramePreview(); return; }
         if(cropper) syncOverlayWithCropper();
         else syncOverlayWithImage();
       }); 
@@ -1309,6 +1612,17 @@
 
   async function renderExportBlob(item, formatInfo, sharedCanvas, sharedCtx) {
     const { img, url } = await decodeToImage(item.file);
+    
+    // CHẾ ĐỘ KHUNG ẢNH: xuất đúng kích thước khung (nhân với mục Thu phóng), ảnh nằm trong ô trong suốt
+    if (frameModeActive()) {
+      const sc = parseFloat(document.getElementById('exportScale').value) || 1;
+      sharedCanvas.width = Math.max(1, Math.round(frameImg.naturalWidth * sc));
+      sharedCanvas.height = Math.max(1, Math.round(frameImg.naturalHeight * sc));
+      drawFramedComposite(sharedCtx, sharedCanvas.width, sharedCanvas.height, img, item, formatInfo.mime === 'image/jpeg');
+      const framedBlob = await encodeCanvasBlob(sharedCanvas, formatInfo);
+      URL.revokeObjectURL(url);
+      return framedBlob;
+    }
     
     let sourceX = 0, sourceY = 0, sourceW = img.width, sourceH = img.height;
     
@@ -1372,6 +1686,12 @@
     sharedCtx.drawImage(img, sourceX, sourceY, sourceW, sourceH, 0, 0, sharedCanvas.width, sharedCanvas.height);
     drawWatermarkContent(sharedCtx, sharedCanvas.width, sharedCanvas.height, actualScaleFactor, false);
     
+    const finalBlob = await encodeCanvasBlob(sharedCanvas, formatInfo);
+    URL.revokeObjectURL(url);
+    return finalBlob;
+  }
+
+  async function encodeCanvasBlob(sharedCanvas, formatInfo) {
     const limitEnabled = document.getElementById('enableSizeLimit').checked;
     const targetBytes = (parseInt(document.getElementById('targetSizeKB').value) || 500) * 1024;
     
@@ -1389,7 +1709,6 @@
       finalBlob = await new Promise(resolve => sharedCanvas.toBlob(resolve, formatInfo.mime, formatInfo.quality));
     }
     
-    URL.revokeObjectURL(url);
     return finalBlob;
   }
 
